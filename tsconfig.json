@@ -1,0 +1,9 @@
+{
+  "compilerOptions": {
+    "types": ["fvtt-types"],
+    "jsx": "react-jsx",
+    "target": "esnext",
+    "moduleResolution": "bundler",
+    "strict": true
+  }
+}

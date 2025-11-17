@@ -1,0 +1,23 @@
+{
+  "name": "foundry-vtt-react-application",
+  "version": "1.0.0",
+  "description": "Extensions of various FoundryVTT classes to support React applications.",
+  "main": "dist/index.mjs",
+  "scripts": {
+    "build": "tsup",
+    "build:watch": "tsup --watch"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "fvtt-types": "^13",
+    "tsup": "^8.5.1"
+  },
+  "dependencies": {
+    "@types/react": "^19.2.5",
+    "@types/react-dom": "^19.2.3",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  }
+}
