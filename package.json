@@ -1,6 +1,6 @@
 {
   "name": "foundry-vtt-react",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Extensions of various FoundryVTT classes to support React applications.",
   "main": "dist/index.mjs",
   "scripts": {
@@ -15,10 +15,12 @@
     "tsup": "^8.5.1",
     "typescript": "^5.9.3"
   },
-  "dependencies": {
-    "@types/react": "^19.2.5",
-    "@types/react-dom": "^19.2.3",
+  "peerDependencies": {
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
+  },
+  "dependencies": {
+    "@types/react": "^19.2.5",
+    "@types/react-dom": "^19.2.3"
   }
 }
