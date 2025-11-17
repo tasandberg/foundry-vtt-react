@@ -1,4 +1,4 @@
-export default class ContextConnector<T> extends EventTarget {
+export class ContextConnector<T> extends EventTarget {
   static UPDATE = "contextUpdate";
 
   constructor() {
@@ -17,5 +17,9 @@ export default class ContextConnector<T> extends EventTarget {
 
   onUpdate(callback: (data: T) => void) {
     this.on(ContextConnector.UPDATE, callback);
+  }
+
+  tearDown(fn: (data: T) => void) {
+    this.removeEventListener(ContextConnector.UPDATE, fn as EventListener);
   }
 }

@@ -15,6 +15,9 @@ var ContextConnector = class _ContextConnector extends EventTarget {
   onUpdate(callback) {
     this.on(_ContextConnector.UPDATE, callback);
   }
+  tearDown(fn) {
+    this.removeEventListener(_ContextConnector.UPDATE, fn);
+  }
 };
 
 // lib/util/mount-app.tsx
@@ -105,7 +108,7 @@ var ReactActorSheetV2 = class extends react_application_mixin_default(foundry.ap
 
 // lib/util/logger.ts
 var logger = (namespace) => (message) => {
-  console.log(`%c[foundry-vtt-react-application][${namespace}]`, "color: blue;", message);
+  console.log(`%c[foundry-vtt-react][${namespace}]`, "color: tomato;", message);
 };
 var logger_default = logger;
 
@@ -142,6 +145,7 @@ function devSetup(appId, entrypoint) {
   }
 }
 export {
+  ContextConnector,
   ReactActorSheetV2,
   ReactApplicationV2,
   devSetup

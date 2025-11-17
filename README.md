@@ -1,4 +1,4 @@
-# Foundry VTT React Application
+# Foundry VTT React
 
 This package provides extensions of various Foundry VTT classes to support React applications development within Foundry.
 

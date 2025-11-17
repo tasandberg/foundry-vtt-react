@@ -1,4 +1,4 @@
-import ContextConnector from "./context-connector";
+import { ContextConnector } from "./context-connector";
 import { mountApp } from "./util/mount-app";
 
 const ReactApplicationMixin = (superclass: any) => {

@@ -1,23 +1,22 @@
-import * as react from 'react';
-
 declare class ContextConnector<T> extends EventTarget {
     static UPDATE: string;
     constructor();
     publishContext(context: T): void;
     on(event: string, callback: (data: T) => void): void;
     onUpdate(callback: (data: T) => void): void;
+    tearDown(fn: (data: T) => void): void;
 }
 
 declare const ReactApplicationV2_base: {
     new ({ reactApp, initialProps, ...options }: any): {
         [x: string]: any;
-        reactApp: react.ComponentType<any>;
+        reactApp: React.ComponentType<any>;
         uuid: string;
         rootId: string;
         innerSelector: string;
         contextConnector: ContextConnector<any>;
         initialProps: {};
-        readonly appIsRendered: boolean;
+        get appIsRendered(): boolean;
         _onRender(context: any, options: any): Promise<void>;
         _replaceHTML(result: HTMLElement, content: HTMLElement): void;
         _prepareContext(options: any): Promise<any>;
@@ -63,13 +62,13 @@ declare class ReactApplicationV2 extends ReactApplicationV2_base {
 declare const ReactActorSheetV2_base: {
     new ({ reactApp, initialProps, ...options }: any): {
         [x: string]: any;
-        reactApp: react.ComponentType<any>;
+        reactApp: React.ComponentType<any>;
         uuid: string;
         rootId: string;
         innerSelector: string;
         contextConnector: ContextConnector<any>;
         initialProps: {};
-        readonly appIsRendered: boolean;
+        get appIsRendered(): boolean;
         _onRender(context: any, options: any): Promise<void>;
         _replaceHTML(result: HTMLElement, content: HTMLElement): void;
         _prepareContext(options: any): Promise<any>;
@@ -104,4 +103,4 @@ declare class ReactActorSheetV2 extends ReactActorSheetV2_base {
  */
 declare function devSetup(appId: string, entrypoint: string): void;
 
-export { ReactActorSheetV2, ReactApplicationV2, devSetup };
+export { ContextConnector, ReactActorSheetV2, ReactApplicationV2, devSetup };
