@@ -1,6 +1,6 @@
 {
   "name": "foundry-vtt-react",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "Extensions of various FoundryVTT classes to support React applications.",
   "main": "dist/index.mjs",
   "scripts": {
