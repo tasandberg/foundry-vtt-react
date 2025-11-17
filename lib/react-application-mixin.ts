@@ -1,8 +1,41 @@
 import { ContextConnector } from "./context-connector";
 import { mountApp } from "./util/mount-app";
 
-const ReactApplicationMixin = (superclass: any) => {
-  return class extends superclass {
+/**
+ * A mixin that integrates React components with Foundry VTT's Application class.
+ * This mixin enables the use of React applications within Foundry VTT's application framework.
+ *
+ * @param superclass - The base class to extend, typically a Foundry VTT Application class
+ * @returns A class that extends the superclass with React integration capabilities
+ *
+ * @remarks
+ * This mixin provides the following features:
+ * - Mounting React components within Foundry VTT applications
+ * - Context management through ContextConnector
+ * - Automatic cleanup and rendering lifecycle management
+ * - Default window options for position and configuration
+ *
+ * @example
+ * ```typescript
+ * class MyReactApp extends ReactApplicationMixin(Application) {
+ *   constructor(options) {
+ *     super({
+ *       reactApp: MyReactComponent,
+ *       initialProps: { data: "example" },
+ *       ...options
+ *     });
+ *   }
+ * }
+ * ```
+ */
+
+type ReactApplicationProps = {
+  reactApp: React.ComponentType<any>;
+  initialProps?: Record<string, any>;
+};
+
+function ReactApplicationMixin(Superclass: any) {
+  return class ReactApplication extends Superclass {
     reactApp: React.ComponentType<any>;
     uuid = foundry.utils.randomID(12);
     rootId = `react-app-root-${this.uuid}`;
@@ -12,19 +45,18 @@ const ReactApplicationMixin = (superclass: any) => {
     static DEFAULT_OPTIONS = {
       position: {
         width: 400,
-        height: 500,
+        height: 300,
       },
       window: {
-        title: "(options.window.title) Hello React-powered Foundry applications",
+        title: "Hello React-powered Foundry applications",
         resizable: true,
         minimizable: true,
       },
     };
 
-    // Initial props passed through the constructor to the React application
     initialProps = {};
 
-    constructor({ reactApp, initialProps, ...options }: any) {
+    constructor({ reactApp, initialProps, ...options }: ReactApplicationProps & any) {
       super(options);
       this.reactApp = reactApp;
       this.contextConnector = new ContextConnector();
@@ -57,7 +89,7 @@ const ReactApplicationMixin = (superclass: any) => {
     }
 
     async _prepareContext(options: any) {
-      const context = await super._prepareContext(options);
+      const context = (await super._prepareContext(options)) as any;
       context.initialProps = this.initialProps;
       return context;
     }
@@ -69,6 +101,6 @@ const ReactApplicationMixin = (superclass: any) => {
       return tempEl;
     }
   };
-};
+}
 
 export default ReactApplicationMixin;

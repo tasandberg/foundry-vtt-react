@@ -36,8 +36,8 @@ function mountApp({
 }
 
 // lib/react-application-mixin.ts
-var ReactApplicationMixin = (superclass) => {
-  return class extends superclass {
+function ReactApplicationMixin(Superclass) {
+  return class ReactApplication extends Superclass {
     reactApp;
     uuid = foundry.utils.randomID(12);
     rootId = `react-app-root-${this.uuid}`;
@@ -46,15 +46,14 @@ var ReactApplicationMixin = (superclass) => {
     static DEFAULT_OPTIONS = {
       position: {
         width: 400,
-        height: 500
+        height: 300
       },
       window: {
-        title: "(options.window.title) Hello React-powered Foundry applications",
+        title: "Hello React-powered Foundry applications",
         resizable: true,
         minimizable: true
       }
     };
-    // Initial props passed through the constructor to the React application
     initialProps = {};
     constructor({ reactApp, initialProps, ...options }) {
       super(options);
@@ -95,7 +94,7 @@ var ReactApplicationMixin = (superclass) => {
       return tempEl;
     }
   };
-};
+}
 var react_application_mixin_default = ReactApplicationMixin;
 
 // lib/react-application-v2.ts

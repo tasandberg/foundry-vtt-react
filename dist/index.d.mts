@@ -8,7 +8,10 @@ declare class ContextConnector<T> extends EventTarget {
 }
 
 declare const ReactApplicationV2_base: {
-    new ({ reactApp, initialProps, ...options }: any): {
+    new ({ reactApp, initialProps, ...options }: {
+        reactApp: React.ComponentType<any>;
+        initialProps?: Record<string, any>;
+    } & any): {
         [x: string]: any;
         reactApp: React.ComponentType<any>;
         uuid: string;
@@ -60,7 +63,10 @@ declare class ReactApplicationV2 extends ReactApplicationV2_base {
 }
 
 declare const ReactActorSheetV2_base: {
-    new ({ reactApp, initialProps, ...options }: any): {
+    new ({ reactApp, initialProps, ...options }: {
+        reactApp: React.ComponentType<any>;
+        initialProps?: Record<string, any>;
+    } & any): {
         [x: string]: any;
         reactApp: React.ComponentType<any>;
         uuid: string;
