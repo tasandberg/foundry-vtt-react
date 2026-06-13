@@ -24,8 +24,8 @@
     "prepublishOnly": "pnpm build"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "Tim Sandberg",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/tasandberg/foundry-vtt-react.git"
