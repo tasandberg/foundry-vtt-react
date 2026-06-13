@@ -1,0 +1,83 @@
+# foundry-vtt-react
+
+A **library package** that bridges React 19 with Foundry VTT's Application framework. It provides React-enabled versions of Foundry classes (ApplicationV2, ActorSheetV2) via a TypeScript mixin. This is **not** a Foundry module — it's consumed by module developers who want React inside their Foundry applications.
+
+## Commands
+
+```bash
+pnpm build         # bundle with tsup
+pnpm build:watch   # rebuild on change (used by consumers via pnpm link)
+```
+
+- Package manager is **pnpm**.
+- There is no test suite — see [Verifying changes](#verifying-changes).
+
+## Architecture
+
+### Mixin-based extension
+
+React capabilities are added to Foundry's base classes through a single mixin:
+
+- `ReactApplicationMixin` ([lib/react-application-mixin.ts](lib/react-application-mixin.ts)) — adds React mounting, context publishing, and lifecycle integration.
+- `ReactApplicationV2` ([lib/react-application-v2.ts](lib/react-application-v2.ts)) = `ReactApplicationMixin(foundry.applications.api.ApplicationV2)`
+- `ReactActorSheetV2` ([lib/react-actor-sheet-v2.ts](lib/react-actor-sheet-v2.ts)) = `ReactApplicationMixin(foundry.applications.sheets.ActorSheetV2)`
+
+The mixin overrides Foundry's render pipeline to inject React instead of Handlebars:
+
+- `_prepareContext` — injects `initialProps` into Foundry's context.
+- `_renderHTML` — returns the root container `<div>` (with `rootId`).
+- `_onRender` — mounts the React app via `mountApp()` (once) and calls `contextConnector.publishContext()`.
+- `_replaceHTML` — suppressed after mount so Foundry's normal DOM replacement doesn't wipe the React tree on re-render.
+
+### Supporting modules
+
+- **ContextConnector** ([lib/context-connector.ts](lib/context-connector.ts)) — `EventTarget`-based pub/sub. `publishContext()` pushes Foundry context updates; React components subscribe via `onUpdate()`.
+- **mountApp** ([lib/util/mount-app.tsx](lib/util/mount-app.tsx)) — thin wrapper around `react-dom/client`; creates the root and renders the app inside a wrapper div.
+- **devSetup** ([lib/util/dev-setup.ts](lib/util/dev-setup.ts)) — injects Vite's React Fast Refresh scripts into Foundry's DOM during development.
+- **logger** ([lib/util/logger.ts](lib/util/logger.ts)) — namespaced console output. Use it instead of raw `console.log`:
+  ```typescript
+  import logger from "./util/logger.js";
+  const log = logger("component-name");
+  log("Message here");
+  ```
+
+### Data flow
+
+1. Consumer instantiates `ReactApplicationV2` with `reactApp` (a React component) and `initialProps`.
+2. On `.render()`, Foundry calls `_prepareContext()` → context now carries `initialProps`.
+3. `_onRender()` mounts the React app and publishes the context.
+4. Subsequent renders call `publishContext()`, notifying subscribed components of context changes.
+
+## Implementation notes — don't regress these
+
+- **`_replaceHTML` is intentionally a no-op after mount.** Removing the `appIsRendered` guard lets Foundry replace the DOM and destroy the React tree on every re-render.
+- **Each instance gets a unique `uuid`** (`foundry.utils.randomID`) used to build `rootId` / `innerSelector`, so multiple React apps can run at once without DOM ID collisions.
+- **`appIsRendered`** checks for `innerSelector` in the DOM to prevent double-mounting; React should mount once per instance.
+
+## Conventions
+
+- **TypeScript strict mode**; use `fvtt-types` for Foundry globals (e.g. `foundry.applications.api.ApplicationV2`).
+- JSX runtime is `react-jsx` (React 17+ transform).
+- Avoid `any` **except** in mixin signatures, where the superclass type is genuinely dynamic.
+- Build is **tsup** (esbuild), not Vite. Two entry points (`lib/index.ts` and the dev-setup utility), **ESM only**, with type declarations.
+
+## Common tasks
+
+**Add a new React-enabled Foundry class:**
+1. `export class ReactFooV2 extends ReactApplicationMixin(foundry.applications.foo.FooV2) {}`
+2. Add it to [lib/index.ts](lib/index.ts) exports.
+
+**Change mixin behavior:** edit [lib/react-application-mixin.ts](lib/react-application-mixin.ts) — the overrides listed under [Architecture](#mixin-based-extension) are the touch points.
+
+## Verifying changes
+
+There is no automated test suite; this library needs a running Foundry VTT instance to exercise. Consumers typically:
+1. `pnpm link` this package into a Foundry module.
+2. Run `pnpm build:watch` here to rebuild on change.
+3. Test within that module inside Foundry.
+
+## Dependencies
+
+- **fvtt-types** — Foundry VTT v13 API type definitions.
+- **react** and **react-dom** 19 — peer dependencies (not bundled).
+- **tsup** — build tool (esbuild under the hood).
