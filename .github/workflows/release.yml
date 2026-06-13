@@ -3,22 +3,25 @@
 # the tag is stamped in here, in the runner, right before publish. An optional
 # leading "v" on the tag is stripped, so both `0.2.0` and `v0.2.0` work.
 #
-# The publish steps key off NPM_TOKEN_PRESENT so they skip gracefully (rather
-# than fail) until an NPM_TOKEN repo secret with publish rights is configured.
+# Auth uses npm Trusted Publishing (OIDC) — no NPM_TOKEN secret. This requires:
+#   1. The package to exist on npm (do one manual bootstrap publish first).
+#   2. A trusted publisher configured on npmjs.com for this repo + this
+#      workflow file (.github/workflows/release.yml).
+# Provenance is attached automatically. `id-token: write` is what lets the
+# runner mint the short-lived OIDC token npm verifies.
 name: Release
 
 on:
   release:
     types: [published]
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
   publish:
     runs-on: ubuntu-latest
-    env:
-      # The secrets context isn't available in step `if:` expressions, so
-      # surface NPM_TOKEN presence here to let the publish step no-op
-      # gracefully until the secret is configured.
-      NPM_TOKEN_PRESENT: ${{ secrets.NPM_TOKEN != '' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -33,6 +36,10 @@ jobs:
           cache: 'pnpm'
           registry-url: 'https://registry.npmjs.org'
 
+      # Trusted Publishing (OIDC) needs npm >= 11.5.1; Node 22 ships npm 10.x.
+      - name: Update npm for OIDC trusted publishing
+        run: npm install -g npm@latest
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -46,11 +53,4 @@ jobs:
           npm version "$VERSION" --no-git-tag-version --allow-same-version
 
       - name: Publish to npm
-        if: env.NPM_TOKEN_PRESENT == 'true'
         run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Skipped publish (no NPM_TOKEN)
-        if: env.NPM_TOKEN_PRESENT != 'true'
-        run: echo "::notice::NPM_TOKEN secret not set — skipping npm publish."
