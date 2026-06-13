@@ -1,14 +1,12 @@
 # Foundry VTT React
 
-This package provides extensions of various Foundry VTT classes to support building React applications inside Foundry VTT.
-
-It is a **library**, consumed by module developers — not a Foundry module itself.
-
-This is a bit experimental, but enables a modern JS workflow and if you know and enjoy React workflows with HMR/fast-refresh, this should have you flying in no time!
+This package provides a development and build harness for creating React applications within Foundry. It also includes extensions of various Foundry VTT classes to support building React applications inside Foundry VTT. This is a bit experimental, but enables a modern JS workflow and if you know and enjoy React workflows with HMR/fast-refresh, this should have you flying in no time.
 
 **Disclaimers:**
-- ⚠️ Only tested against Foundry V13 at this point, v14 compatability testing coming soon (wanna try it out for me?)
-- ℹ️ Would love input if you're a Vite pro -- I have a suspicion devSetup could be a plugin, haven't had time to look into it.
+- Only tested against Foundry v13
+- Not a Foundry module, but a build dependency to add to your module's build workflow and dev setup
+- Relies on Vitejs building.
+- TypeScript friendly!
 
 ## Installation
 
