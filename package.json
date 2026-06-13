@@ -24,8 +24,16 @@
     "prepublishOnly": "pnpm build"
   },
   "keywords": [],
-  "author": "",
+  "author": "Tim Sandberg",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tasandberg/foundry-vtt-react.git"
+  },
+  "homepage": "https://github.com/tasandberg/foundry-vtt-react#readme",
+  "bugs": {
+    "url": "https://github.com/tasandberg/foundry-vtt-react/issues"
+  },
   "devDependencies": {
     "fvtt-types": "^13",
     "tsup": "^8.5.1",
