@@ -2,6 +2,7 @@
   "name": "foundry-vtt-react",
   "version": "0.0.0",
   "description": "Extensions of various FoundryVTT classes to support React applications.",
+  "packageManager": "pnpm@10.30.3",
   "main": "dist/index.mjs",
   "types": "dist/index.d.mts",
   "exports": {
