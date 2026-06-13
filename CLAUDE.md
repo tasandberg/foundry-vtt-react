@@ -76,6 +76,17 @@ There is no automated test suite; this library needs a running Foundry VTT insta
 2. Run `pnpm build:watch` here to rebuild on change.
 3. Test within that module inside Foundry.
 
+## CI & releases
+
+CI ([.github/workflows/ci.yml](.github/workflows/ci.yml)) runs on every PR and push to `main`: install + `pnpm build`. The build emits type declarations, so a clean build is the typecheck — there is no separate lint/test step.
+
+Publishing to npm is **GitHub-Release-driven** ([.github/workflows/release.yml](.github/workflows/release.yml)):
+
+- The **release tag is the source of truth for the version.** `package.json` ships a `0.0.0` placeholder; the workflow stamps the tag into it (an optional leading `v` is stripped) before `npm publish`. Do **not** hand-bump `version` in `package.json`.
+- To cut a release: GitHub → Releases → *Draft a new release* → new tag `0.2.0` (patch/minor/major as appropriate) → *Publish*. The workflow builds and publishes to npm's `latest` tag.
+- `dist/` is **not** committed — it's `.gitignore`d and shipped to npm via the `files` field, rebuilt fresh on publish (`prepublishOnly`).
+- Publishing requires an `NPM_TOKEN` repo secret; until it's set, the workflow runs but skips the publish step (it won't fail).
+
 ## Dependencies
 
 - **fvtt-types** — Foundry VTT v13 API type definitions.

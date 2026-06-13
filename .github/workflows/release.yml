@@ -1,0 +1,56 @@
+# Publishes to npm when a GitHub Release is published. The release tag is the
+# source of truth for the version: package.json ships a 0.0.0 placeholder and
+# the tag is stamped in here, in the runner, right before publish. An optional
+# leading "v" on the tag is stripped, so both `0.2.0` and `v0.2.0` work.
+#
+# The publish steps key off NPM_TOKEN_PRESENT so they skip gracefully (rather
+# than fail) until an NPM_TOKEN repo secret with publish rights is configured.
+name: Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      # The secrets context isn't available in step `if:` expressions, so
+      # surface NPM_TOKEN presence here to let the publish step no-op
+      # gracefully until the secret is configured.
+      NPM_TOKEN_PRESENT: ${{ secrets.NPM_TOKEN != '' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js version 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      - name: Stamp version from release tag
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "Publishing version $VERSION"
+          npm version "$VERSION" --no-git-tag-version --allow-same-version
+
+      - name: Publish to npm
+        if: env.NPM_TOKEN_PRESENT == 'true'
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Skipped publish (no NPM_TOKEN)
+        if: env.NPM_TOKEN_PRESENT != 'true'
+        run: echo "::notice::NPM_TOKEN secret not set — skipping npm publish."
