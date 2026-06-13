@@ -1,11 +1,27 @@
 {
   "name": "foundry-vtt-react",
-  "version": "0.1.1",
+  "version": "0.0.0",
   "description": "Extensions of various FoundryVTT classes to support React applications.",
+  "packageManager": "pnpm@10.30.3",
   "main": "dist/index.mjs",
+  "types": "dist/index.d.mts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    },
+    "./dev-setup": {
+      "types": "./dist/util/dev-setup.d.mts",
+      "import": "./dist/util/dev-setup.mjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsup",
-    "build:watch": "tsup --watch"
+    "build:watch": "tsup --watch",
+    "prepublishOnly": "pnpm build"
   },
   "keywords": [],
   "author": "",
@@ -22,5 +38,10 @@
   "dependencies": {
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@league-of-foundry-developers/foundry-vtt-types"
+    ]
   }
 }

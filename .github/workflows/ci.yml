@@ -1,0 +1,31 @@
+# Pre-merge checks. Runs on every PR and on pushes to main. The tsup build
+# emits type declarations (dts), so a clean build doubles as the typecheck —
+# there is no separate lint or test suite yet.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js version 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build (also typechecks via dts)
+        run: pnpm build

@@ -1,0 +1,56 @@
+# Publishes to npm when a GitHub Release is published. The release tag is the
+# source of truth for the version: package.json ships a 0.0.0 placeholder and
+# the tag is stamped in here, in the runner, right before publish. An optional
+# leading "v" on the tag is stripped, so both `0.2.0` and `v0.2.0` work.
+#
+# Auth uses npm Trusted Publishing (OIDC) — no NPM_TOKEN secret. This requires:
+#   1. The package to exist on npm (do one manual bootstrap publish first).
+#   2. A trusted publisher configured on npmjs.com for this repo + this
+#      workflow file (.github/workflows/release.yml).
+# Provenance is attached automatically. `id-token: write` is what lets the
+# runner mint the short-lived OIDC token npm verifies.
+name: Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js version 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+          registry-url: 'https://registry.npmjs.org'
+
+      # Trusted Publishing (OIDC) needs npm >= 11.5.1; Node 22 ships npm 10.x.
+      - name: Update npm for OIDC trusted publishing
+        run: npm install -g npm@latest
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      - name: Stamp version from release tag
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "Publishing version $VERSION"
+          npm version "$VERSION" --no-git-tag-version --allow-same-version
+
+      - name: Publish to npm
+        run: npm publish --access public
