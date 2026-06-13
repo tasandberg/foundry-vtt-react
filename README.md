@@ -4,6 +4,14 @@ This package provides extensions of various Foundry VTT classes to support build
 
 It is a **library**, consumed by module developers — not a Foundry module itself.
 
+This is a bit experimental, but enables a modern JS workflow and if you know and enjoy React workflows with HMR/fast-refresh, this should have you flying in no time!
+
+**Disclaimers:**
+
+  ⚠️ Only tested against Foundry V13 at this point, v14 compatability testing coming soon (wanna try it out for me?)
+
+  ℹ️ Would love input if you're a Vite pro -- I have a suspicion devUtils could be a plugin, haven't had time to look into it.
+
 ## Installation
 
 ```bash
@@ -19,8 +27,8 @@ npm install react react-dom
 
 ## Supported Foundry classes
 
-- **`ReactApplicationV2`** — a base `ApplicationV2` that renders a React component instead of a Handlebars template.
-- **`ReactActorSheetV2`** — an `ActorSheetV2` that renders with React, letting your component react to document changes through the native sheet lifecycle.
+- `ReactApplicationV2` — a base `ApplicationV2` that renders a React component instead of a Handlebars template.
+- `ReactActorSheetV2` — an `ActorSheetV2` that renders with React, letting your component react to document changes through the native sheet lifecycle.
 
 Both are produced by the same `ReactApplicationMixin`, so they share the options and lifecycle described below.
 
@@ -53,19 +61,21 @@ const app = new ReactApplicationV2({
 app.render(true);
 ```
 
-![A React component rendered inside a Foundry application window](assets/image.png)
+A React component rendered inside a Foundry application window
 
 **Constructor options**
 
-| Option         | Type                  | Description                                                                                  |
-| -------------- | --------------------- | -------------------------------------------------------------------------------------------- |
-| `reactApp`     | `React.ComponentType` | The component mounted into the application window.                                            |
-| `initialProps` | `object` (optional)   | Props passed to `reactApp` on mount. Also reachable via `_prepareContext` (see below).        |
-| ...options     | `ApplicationV2`       | Any standard `ApplicationV2` options (`window`, `position`, `classes`, `actions`, etc.).      |
+
+| Option         | Type                  | Description                                                                              |
+| -------------- | --------------------- | ---------------------------------------------------------------------------------------- |
+| `reactApp`     | `React.ComponentType` | The component mounted into the application window.                                       |
+| `initialProps` | `object` (optional)   | Props passed to `reactApp` on mount. Also reachable via `_prepareContext` (see below).   |
+| ...options     | `ApplicationV2`       | Any standard `ApplicationV2` options (`window`, `position`, `classes`, `actions`, etc.). |
+
 
 ### Building a React actor sheet
 
-Subclass `ReactActorSheetV2`, set `reactApp`, and register it as the sheet for your actor type. Override `_prepareContext` to choose exactly which props your component receives — this is also where you hand your component the [`ContextConnector`](#reacting-to-foundry-updates-with-contextconnector) so it can subscribe to live document updates:
+Subclass `ReactActorSheetV2`, set `reactApp`, and register it as the sheet for your actor type. Override `_prepareContext` to choose exactly which props your component receives — this is also where you hand your component the `[ContextConnector](#reacting-to-foundry-updates-with-contextconnector)` so it can subscribe to live document updates:
 
 ```jsx
 import { ReactActorSheetV2 } from "foundry-vtt-react";
@@ -135,15 +145,17 @@ const handleUpdate = foundry.utils.debounce(({ document }) => {
 const off = contextConnector.onUpdate(handleUpdate);
 ```
 
-**`ContextConnector<T>` API**
+`ContextConnector<T>` **API**
 
-| Method                       | Returns      | Description                                                                 |
-| ---------------------------- | ------------ | --------------------------------------------------------------------------- |
-| `onUpdate(cb)`               | `() => void` | Subscribe to context updates. Returns a disposer that unsubscribes.         |
-| `tearDown(cb)`               | `void`       | Unsubscribe a callback previously passed to `onUpdate`.                     |
-| `on(event, cb)`              | `() => void` | Subscribe to a custom event. Returns a disposer.                            |
-| `off(event, cb)`             | `void`       | Unsubscribe a callback from a custom event.                                 |
-| `publishContext(context)`    | `void`       | Emit a context update. Called for you by the mixin on each render.          |
+
+| Method                    | Returns      | Description                                                         |
+| ------------------------- | ------------ | ------------------------------------------------------------------- |
+| `onUpdate(cb)`            | `() => void` | Subscribe to context updates. Returns a disposer that unsubscribes. |
+| `tearDown(cb)`            | `void`       | Unsubscribe a callback previously passed to `onUpdate`.             |
+| `on(event, cb)`           | `() => void` | Subscribe to a custom event. Returns a disposer.                    |
+| `off(event, cb)`          | `void`       | Unsubscribe a callback from a custom event.                         |
+| `publishContext(context)` | `void`       | Emit a context update. Called for you by the mixin on each render.  |
+
 
 > Use the returned disposer **or** `tearDown(cb)` to clean up — either removes the listener.
 
@@ -172,7 +184,7 @@ my-module/
 
 ### Steps
 
-**1. Manifest — point `esmodules` at the built path.**
+**1. Manifest — point** `esmodules` **at the built path.**
 
 ```jsonc
 // module.json
@@ -184,7 +196,7 @@ my-module/
 }
 ```
 
-**2. Real app entry (`src/main.ts`)** — your normal module bootstrap:
+**2. Real app entry (**`src/main.ts`**)** — your normal module bootstrap:
 
 ```ts
 import MyActorSheet from "./MyActorSheet";
@@ -197,7 +209,7 @@ foundry.helpers.Hooks.once("ready", () => {
 });
 ```
 
-**3. Dev-only shim (`src/main.js`)** — calls `devSetup` with your module id and the path to the real entry:
+**3. Dev-only shim (**`src/main.js`**)** — calls `devSetup` with your module id and the path to the real entry:
 
 ```js
 import { id as APP_ID } from "../module.json";
@@ -242,7 +254,7 @@ export default defineConfig({
 });
 ```
 
-**5. Scripts (`package.json`):**
+**5. Scripts (**`package.json`**):**
 
 ```jsonc
 {
@@ -255,6 +267,16 @@ export default defineConfig({
 
 **6. Make the module visible to Foundry** — symlink (or copy) your module folder into your Foundry data `Data/modules/` directory so Foundry can read `module.json`.
 
+> If you run foundry in docker like me, you can simply mount your local module volume into the docker foundry's modules folder like:
+>
+> ```
+> foundry:
+>     image: felddy/foundryvtt:13
+>     hostname: localhost
+>     volumes:
+>       - /path/to/my-module:/data/Data/modules/my-module
+> ```
+
 **7. Run it.** Start Foundry (port `30000`), then `npm run dev` and open the Vite server (e.g. `http://localhost:30001`). Foundry loads your module; the manifest's `dist/main.js` is served from `src/main.js`, `devSetup` boots React Refresh, and edits to your components hot-reload.
 
 > For production, run `npm run build` and ship `dist/` — `dist/main.js` is now the bundled app, and `devSetup` is not involved.
@@ -265,10 +287,12 @@ export default defineConfig({
 devSetup(appId: string, entrypoint: string): void
 ```
 
-| Parameter    | Description                                                                                                          |
-| ------------ | ------------------------------------------------------------------------------------------------------------------- |
+
+| Parameter    | Description                                                                                                            |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------- |
 | `appId`      | Your module's `id` (from `module.json`). Used to build the served paths and to namespace the injected `<script>` tags. |
-| `entrypoint` | Path to your real app entry, relative to the module root (e.g. `dist/main.ts`), as served by the Vite dev server.    |
+| `entrypoint` | Path to your real app entry, relative to the module root (e.g. `dist/main.ts`), as served by the Vite dev server.      |
+
 
 It injects (idempotently — safe to call more than once):
 
@@ -285,3 +309,4 @@ import {
   devSetup,
 } from "foundry-vtt-react";
 ```
+
