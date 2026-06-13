@@ -29,12 +29,15 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
 
+      # Do NOT set registry-url here: it makes setup-node write an .npmrc with
+      # a NODE_AUTH_TOKEN-based authToken line, which shadows OIDC trusted
+      # publishing and makes `npm publish` send an empty credential (npm then
+      # returns a 404 on the PUT). With no auth .npmrc present, npm uses OIDC.
       - name: Setup Node.js version 22
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: 'pnpm'
-          registry-url: 'https://registry.npmjs.org'
 
       # Trusted Publishing (OIDC) needs npm >= 11.5.1; Node 22 ships npm 10.x.
       - name: Update npm for OIDC trusted publishing
