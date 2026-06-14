@@ -261,6 +261,45 @@ All options are optional:
 | `port`          | `30001`                                                    | The Vite dev server port.                                                |
 | `manifestEntry` | basename of `module.json` `esmodules[0]`, else `"main.js"` | The bundle filename Foundry requests (where the dev preamble is served). |
 
+#### What `foundryReact()` does
+
+With the defaults above (and a `module.json` whose `id` is `"my-module"`), `foundryReact()` contributes the following Vite config — this is the hand-written config the plugin replaces. Each value is only applied when you **haven't** set it yourself, so anything you specify in `vite.config.ts` always wins:
+
+```ts
+{
+  base: "/modules/my-module/dist",
+  root: "src",
+  server: {
+    port: 30001,
+    proxy: {
+      // Everything that isn't your dev bundle is proxied to Foundry.
+      "^(?!/modules/my-module/dist)": "http://localhost:30000",
+      "/socket.io": { target: "ws://localhost:30000", ws: true },
+    },
+  },
+  build: {
+    outDir: "<project root>/dist",
+    emptyOutDir: true,
+    rollupOptions: {
+      input: "<project root>/src/main.ts", // your `entry`
+      output: { entryFileNames: "[name].js", assetFileNames: "[name].[ext]", format: "es" },
+    },
+  },
+}
+```
+
+On top of that, in dev it serves this module at the manifest URL (`/modules/my-module/dist/main.js`) — replacing the old `src/main.js` shim:
+
+```js
+// React Fast Refresh preamble (reused from @vitejs/plugin-react, base derived from your config)
+import { injectIntoGlobalHook } from "/modules/my-module/dist/@react-refresh";
+injectIntoGlobalHook(window);
+window.$RefreshReg$ = () => {};
+window.$RefreshSig$ = () => (type) => type;
+// then dynamically import your real entry (must be dynamic so the preamble runs first)
+import("/modules/my-module/dist/main.ts");
+```
+
 `vite` and `@vitejs/plugin-react` are **optional peer dependencies** — they're only needed for this plugin, not for the runtime classes. Install them in your module (you already have them for any React + Vite setup).
 
 > #### Migrating from `devSetup`
