@@ -1,4 +1,5 @@
-import ReactApplicationMixin from "./react-application-mixin";
+import type { DeepPartial } from "fvtt-types/utils";
+import ReactApplicationMixin, { type ReactApplicationProps } from "./react-application-mixin";
 
 /**
  * A Foundry VTT Application class that integrates React components with the Foundry application framework.
@@ -21,4 +22,13 @@ import ReactApplicationMixin from "./react-application-mixin";
  * @property {Object} initialProps - Initial properties passed to the React component
  * @property {string} rootId - ID added to the root element where the React app will be mounted
  */
-export class ReactApplicationV2 extends ReactApplicationMixin(foundry.applications.api.ApplicationV2) {}
+const ReactApplicationV2_Base: ReactApplicationMixin.Mix<typeof foundry.applications.api.ApplicationV2> =
+  ReactApplicationMixin(foundry.applications.api.ApplicationV2);
+
+export class ReactApplicationV2 extends ReactApplicationV2_Base {
+  constructor(
+    options: ReactApplicationProps & DeepPartial<foundry.applications.api.ApplicationV2.Configuration>,
+  ) {
+    super(options);
+  }
+}
