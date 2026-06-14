@@ -134,6 +134,14 @@ export default function foundryReact(options: FoundryReactOptions = {}): Plugin 
           },
         },
       };
+
+      // foundry-vtt-react mounts your app with react-dom, so react/react-dom must resolve to a
+      // single copy — when this package is linked or installed from git it otherwise pulls a
+      // second copy and every hook throws "Invalid hook call". Add only the entries the user
+      // hasn't already deduped (Vite concatenates this with their list, so don't duplicate).
+      const dedupe = ["react", "react-dom"].filter((d) => !userConfig.resolve?.dedupe?.includes(d));
+      if (dedupe.length) next.resolve = { dedupe };
+
       return next;
     },
 

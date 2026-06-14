@@ -214,6 +214,9 @@ For a module whose `id` is `my-module`, `foundryReact()` contributes the Vite co
 {
   base: "/modules/my-module/dist",
   root: "src",
+  // react/react-dom forced to a single copy — without this, a linked or git-installed
+  // foundry-vtt-react pulls a second React and every hook throws "Invalid hook call".
+  resolve: { dedupe: ["react", "react-dom"] },
   server: {
     port: 30001,
     proxy: {
