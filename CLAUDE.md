@@ -33,7 +33,8 @@ The mixin overrides Foundry's render pipeline to inject React instead of Handleb
 
 - **ContextConnector** ([lib/context-connector.ts](lib/context-connector.ts)) — `EventTarget`-based pub/sub. `publishContext()` pushes Foundry context updates; React components subscribe via `onUpdate()`.
 - **mountApp** ([lib/util/mount-app.tsx](lib/util/mount-app.tsx)) — thin wrapper around `react-dom/client`; creates the root and renders the app inside a wrapper div.
-- **devSetup** ([lib/util/dev-setup.ts](lib/util/dev-setup.ts)) — injects Vite's React Fast Refresh scripts into Foundry's DOM during development.
+- **vite plugin** ([lib/vite/index.ts](lib/vite/index.ts)) — the `foundry-vtt-react/vite` subpath export. A Vite plugin that owns the Foundry-specific dev/build config (`base`, `root`, `server.proxy`, `build` — only filling values the user hasn't set) and, in dev, serves the React Fast Refresh preamble + a dynamic import of the real entry at the manifest's `esmodules` URL via middleware (no shim file). Reuses `@vitejs/plugin-react`'s `preambleCode` via a lazy, optional import (falls back to a vendored copy). The entry import **must stay dynamic** — a static import would hoist above `injectIntoGlobalHook(window)` and break Fast Refresh.
+- **devSetup** ([lib/util/dev-setup.ts](lib/util/dev-setup.ts)) — **deprecated** (superseded by the vite plugin above). Injects Vite's React Fast Refresh scripts into Foundry's DOM during development.
 - **logger** ([lib/util/logger.ts](lib/util/logger.ts)) — namespaced console output. Use it instead of raw `console.log`:
   ```typescript
   import logger from "./util/logger.js";
@@ -59,7 +60,7 @@ The mixin overrides Foundry's render pipeline to inject React instead of Handleb
 - **TypeScript strict mode**; use `fvtt-types` for Foundry globals (e.g. `foundry.applications.api.ApplicationV2`).
 - JSX runtime is `react-jsx` (React 17+ transform).
 - Avoid `any` **except** in mixin signatures, where the superclass type is genuinely dynamic.
-- Build is **tsup** (esbuild), not Vite. Two entry points (`lib/index.ts` and the dev-setup utility), **ESM only**, with type declarations.
+- Build is **tsup** (esbuild), not Vite. Three entry points (`lib/index.ts`, the dev-setup utility, and the `lib/vite` plugin), **ESM only**, with type declarations. The `./vite` subpath is exported separately in `package.json`; `vite` and `@vitejs/plugin-react` are **optional** peer dependencies (only the plugin needs them).
 
 ## Common tasks
 

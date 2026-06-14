@@ -8,6 +8,10 @@ const log = logger("dev-setup");
  * with a Vite development server, this function injects necessary scripts to enable React Fast Refresh and loads
  * the React application entrypoint.
  *
+ * @deprecated Use the `foundry-vtt-react/vite` plugin instead. It derives the refresh preamble and paths
+ * from your Vite config (no hand-maintained paths) and serves the dev entry via dev-server middleware, so
+ * the `src/main.js` shim that calls `devSetup` is no longer needed. This function will be removed in a future major.
+ *
  * @param {string} appId - The application ID used to construct module paths, typically the `id` value in `module.json`.
  * @param {string} entrypoint - The path to the React application entrypoint script relative to the module root. This should match
  *                             the entrypoint defined in the Vite configuration.
