@@ -25,6 +25,7 @@
   "scripts": {
     "build": "tsup",
     "build:watch": "tsup --watch",
+    "prepare": "tsup",
     "prepublishOnly": "pnpm build"
   },
   "keywords": [],
