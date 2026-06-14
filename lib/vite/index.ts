@@ -82,6 +82,7 @@ export default function foundryReact(options: FoundryReactOptions = {}): Plugin 
   let base = "";
   let entryUrl = "";
   let manifestEntry = "";
+  let foundryUrl = "";
 
   return {
     name: PLUGIN_NAME,
@@ -99,7 +100,7 @@ export default function foundryReact(options: FoundryReactOptions = {}): Plugin 
       }
 
       const entry = options.entry ?? "src/main.ts";
-      const foundryUrl = options.foundryUrl ?? "http://localhost:30000";
+      foundryUrl = options.foundryUrl ?? "http://localhost:30000";
       const port = options.port ?? 30001;
       manifestEntry =
         options.manifestEntry ?? (manifest?.esmodules?.[0] ? basename(manifest.esmodules[0]) : "main.js");
@@ -151,7 +152,11 @@ export default function foundryReact(options: FoundryReactOptions = {}): Plugin 
         res.end(body);
       });
 
-      server.config.logger.info(`  ${PLUGIN_NAME} serving dev entry at ${manifestUrl}`);
+      // One concise dev-only line: the integration is invisible (no shim file), so confirm it's
+      // active, where the entry is served, and the proxy target (a wrong foundryUrl is otherwise silent).
+      server.config.logger.info(
+        `  ${PLUGIN_NAME} serving dev entry at ${manifestUrl} (proxying to ${foundryUrl})`,
+      );
     },
   };
 }
