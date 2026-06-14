@@ -26,29 +26,20 @@ export interface FoundryReactOptions {
 const PLUGIN_NAME = "vite-plugin-foundry-react";
 
 /**
- * The React Fast Refresh preamble (with `@vitejs/plugin-react`'s `__BASE__` placeholder).
- * Used as a fallback when that package's `preambleCode` can't be loaded; kept byte-for-byte
- * in sync with it.
- */
-export const FALLBACK_PREAMBLE = `import { injectIntoGlobalHook } from "__BASE__@react-refresh";
-injectIntoGlobalHook(window);
-window.$RefreshReg$ = () => {};
-window.$RefreshSig$ = () => (type) => type;`;
-
-/**
- * Resolve the canonical Fast Refresh preamble template from `@vitejs/plugin-react`, so we don't
- * silently drift from it. Imported lazily (and defensively) — merely loading this plugin must not
- * pull in plugin-react or couple us to its internal-API version. Falls back to {@link FALLBACK_PREAMBLE}.
+ * Read the React Fast Refresh preamble template (with the `__BASE__` placeholder) from
+ * `@vitejs/plugin-react` — its single source of truth, so we never drift from it.
+ *
+ * Imported lazily, never at module load: a static import would pull plugin-react in just to read
+ * this plugin, coupling us to its internal-API version (e.g. its `vite/internal` usage).
+ *
+ * No vendored fallback: the preamble is useless without plugin-react's `/@react-refresh` runtime,
+ * which plugin-react serves — so it's required for the dev server. If it's missing, the `import()`
+ * below throws a clear "Cannot find package" on its own; we don't dress that up. The `??` covers
+ * both export shapes (named in older versions, on the default export since v6).
  */
 export async function loadPreambleTemplate(): Promise<string> {
-  try {
-    const mod: any = await import("@vitejs/plugin-react");
-    const preamble = mod?.default?.preambleCode ?? mod?.preambleCode;
-    if (typeof preamble === "string") return preamble;
-  } catch {
-    // plugin-react not installed or incompatible — fall back below.
-  }
-  return FALLBACK_PREAMBLE;
+  const mod: any = await import("@vitejs/plugin-react");
+  return mod.default?.preambleCode ?? mod.preambleCode;
 }
 
 /** Read the module manifest (`module.json`) from the project root, if present. */
@@ -176,14 +167,10 @@ export default function foundryReact(options: FoundryReactOptions = {}): Plugin 
  * The entry import must be dynamic: a static `import` would be hoisted above
  * `injectIntoGlobalHook(window)` and break Fast Refresh.
  *
- * @param preambleTemplate The preamble template (with `__BASE__` placeholder); pass the value
- * from {@link loadPreambleTemplate}. Defaults to {@link FALLBACK_PREAMBLE}.
+ * @param preambleTemplate The preamble template (with `__BASE__` placeholder), from
+ * {@link loadPreambleTemplate}.
  */
-export function buildDevModule(
-  base: string,
-  entryUrl: string,
-  preambleTemplate: string = FALLBACK_PREAMBLE,
-): string {
+export function buildDevModule(base: string, entryUrl: string, preambleTemplate: string): string {
   // `@vitejs/plugin-react`'s preamble expects `__BASE__` to be Vite's normalized base,
   // which always ends with a slash (e.g. `/modules/x/dist/` + `@react-refresh`).
   const baseWithSlash = base.endsWith("/") ? base : `${base}/`;
