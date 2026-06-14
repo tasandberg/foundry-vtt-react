@@ -1,7 +1,7 @@
 import { defineConfig } from "tsup";
 
 export default defineConfig({
-  entry: ["lib/index.ts", "lib/util/dev-setup.ts"],
+  entry: ["lib/index.ts", "lib/util/dev-setup.ts", "lib/vite/index.ts"],
   format: ["esm"],
   dts: true,
   splitting: true,

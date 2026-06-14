@@ -157,143 +157,96 @@ const off = contextConnector.onUpdate(handleUpdate);
 
 ## Development setup with Vite
 
-For a fast dev loop with React Fast Refresh (HMR) inside Foundry, you split your module into **two entry points** and let a Vite dev server serve them:
-
-- `src/main.ts` — your **real app** entry (registers hooks, sheets, etc.). This is what gets bundled for production.
-- `src/main.js` — a tiny **dev-only shim** that calls `devSetup`, which injects the React Refresh runtime and then loads `src/main.ts` over HMR.
-
-The trick that ties it together: your manifest's `esmodules` points at `dist/main.js`. In a production build that's the bundled app. In development, the Vite dev server is configured so that the same `/modules/<id>/dist/main.js` URL is served from `src/main.js` (the shim) — so **the manifest entry resolves to the dev shim while you develop, and to the real bundle once built.**
-
-### Directory structure
+For a fast dev loop with React Fast Refresh inside Foundry, add the `foundry-vtt-react/vite` plugin. Your manifest's `esmodules` points at `dist/main.js`: in production that's your built bundle, and in dev the plugin's middleware serves that same URL with the Fast Refresh preamble + a dynamic import of your real entry — so there's no shim file and no hand-written Vite config to maintain.
 
 ```text
 my-module/
-├─ module.json          # manifest → esmodules: ["dist/main.js"]
-├─ package.json
+├─ module.json          # esmodules: ["dist/main.js"]
 ├─ vite.config.ts
-├─ src/
-│  ├─ main.js           # dev-only shim: calls devSetup() (served at dist/main.js in dev)
-│  ├─ main.ts           # real app entry: Hooks, registerSheet, … (build input)
-│  └─ MySheetApp.tsx    # your React component(s)
-└─ dist/                # build output (gitignored); created by `vite build`
+└─ src/
+   ├─ main.ts           # real entry: Hooks, registerSheet, … (build input)
+   └─ MySheetApp.tsx    # your React component(s)
 ```
 
-### Steps
-
-**1. Manifest — point** `esmodules` **at the built path.**
-
-```jsonc
-// module.json
-{
-  "id": "my-module",
-  "esmodules": ["dist/main.js"],
-  "styles": ["dist/main.css"],
-  "compatibility": { "minimum": "13", "verified": "13" }
-}
-```
-
-**2. Real app entry (**`src/main.ts`**)** — your normal module bootstrap:
-
-```ts
-import MyActorSheet from "./MyActorSheet";
-
-foundry.helpers.Hooks.once("ready", () => {
-  foundry.documents.collections.Actors.registerSheet("my-module", MyActorSheet, {
-    types: ["character"],
-    makeDefault: true,
-  });
-});
-```
-
-**3. Dev-only shim (**`src/main.js`**)** — calls `devSetup` with your module id and the path to the real entry:
-
-```js
-import { id as APP_ID } from "../module.json";
-import { devSetup } from "foundry-vtt-react";
-
-// Loads @react-refresh + src/main.ts (served at dist/main.ts) with HMR.
-devSetup(APP_ID, "dist/main.ts");
-```
-
-**4. Vite config** — serve `src/` at the manifest's `dist` path and proxy everything else to Foundry:
+**1. Add the plugin** — it derives everything from your `module.json` `id`:
 
 ```ts
 // vite.config.ts
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
-import path from "path";
-import { id as APP_ID } from "./module.json";
+import foundryReact from "foundry-vtt-react/vite";
 
-export default defineConfig({
-  plugins: [react()],
-  root: "src/",
-  // Serve src/ under the path the manifest references, so
-  // /modules/<id>/dist/main.js resolves to src/main.js (the shim),
-  // and /modules/<id>/dist/main.ts resolves to src/main.ts (the app).
-  base: `/modules/${APP_ID}/dist`,
+export default defineConfig({ plugins: [react(), foundryReact()] });
+```
+
+**2. Add scripts** — `"dev": "vite"` for the HMR server, `"build": "vite build"` for production.
+
+**3. Make the module visible to Foundry** — symlink (or copy) your module folder into Foundry's `Data/modules/`. With Docker, mount it instead:
+
+> ```yaml
+> foundry:
+>   image: felddy/foundryvtt:13
+>   volumes:
+>     - /path/to/my-module:/data/Data/modules/my-module
+> ```
+
+**4. Run it** — start Foundry (`:30000`), then `npm run dev` and open the Vite server (`:30001`). Edits to your components hot-reload. For production, `npm run build` ships `dist/`; the dev middleware isn't involved.
+
+`vite` and `@vitejs/plugin-react` are **optional peer dependencies** — needed only for this plugin, not the runtime classes (you already have them for any React + Vite setup).
+
+### Plugin options
+
+All options are optional:
+
+| Option          | Default                                                    | Description                                                              |
+| --------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `appId`         | the `id` read from `./module.json`                         | Your module's `id`. Used to build served paths and the proxy rule.       |
+| `entry`         | `"src/main.ts"`                                            | Your real app entry / build input, relative to the project root.         |
+| `foundryUrl`    | `"http://localhost:30000"`                                 | The local Foundry server that non-bundle requests are proxied to.        |
+| `port`          | `30001`                                                    | The Vite dev server port.                                                |
+| `manifestEntry` | basename of `module.json` `esmodules[0]`, else `"main.js"` | The bundle filename Foundry requests (where the dev preamble is served). |
+
+### What it expands to
+
+For a module whose `id` is `my-module`, `foundryReact()` contributes the Vite config you'd otherwise hand-write — each value applied only when you haven't set it yourself, so your own config always wins:
+
+```ts
+{
+  base: "/modules/my-module/dist",
+  root: "src",
+  // react/react-dom forced to a single copy — without this, a linked or git-installed
+  // foundry-vtt-react pulls a second React and every hook throws "Invalid hook call".
+  resolve: { dedupe: ["react", "react-dom"] },
   server: {
     port: 30001,
     proxy: {
-      // Everything that isn't your dev bundle goes to the Foundry server.
-      [`^(?!/modules/${APP_ID}/dist)`]: "http://localhost:30000/",
+      "^(?!/modules/my-module/dist)": "http://localhost:30000", // non-bundle requests → Foundry
       "/socket.io": { target: "ws://localhost:30000", ws: true },
     },
   },
   build: {
-    outDir: path.resolve(__dirname, "dist"),
+    outDir: "<root>/dist",
     emptyOutDir: true,
     rollupOptions: {
-      input: path.resolve(__dirname, "src/main.ts"), // build the real entry
+      input: "<root>/src/main.ts", // your `entry`
       output: { entryFileNames: "[name].js", assetFileNames: "[name].[ext]", format: "es" },
     },
   },
-});
-```
-
-**5. Scripts (**`package.json`**):**
-
-```jsonc
-{
-  "scripts": {
-    "dev": "vite",          // dev server with HMR
-    "build": "vite build"   // produces dist/main.js for production
-  }
 }
 ```
 
-**6. Make the module visible to Foundry** — symlink (or copy) your module folder into your Foundry data `Data/modules/` directory so Foundry can read `module.json`.
+In dev it also serves the manifest URL (`/modules/my-module/dist/main.js`) with the module that replaces the old `src/main.js` shim:
 
-> If you run foundry in docker like me, you can simply mount your local module volume into the docker foundry's modules folder like:
->
-> ```
-> foundry:
->     image: felddy/foundryvtt:13
->     hostname: localhost
->     volumes:
->       - /path/to/my-module:/data/Data/modules/my-module
-> ```
-
-**7. Run it.** Start Foundry (port `30000`), then `npm run dev` and open the Vite server (e.g. `http://localhost:30001`). Foundry loads your module; the manifest's `dist/main.js` is served from `src/main.js`, `devSetup` boots React Refresh, and edits to your components hot-reload.
-
-> For production, run `npm run build` and ship `dist/` — `dist/main.js` is now the bundled app, and `devSetup` is not involved.
-
-### `devSetup` reference
-
-```ts
-devSetup(appId: string, entrypoint: string): void
+```js
+// Fast Refresh preamble (reused from @vitejs/plugin-react; base derived from your config)
+import { injectIntoGlobalHook } from "/modules/my-module/dist/@react-refresh";
+injectIntoGlobalHook(window);
+window.$RefreshReg$ = () => {};
+window.$RefreshSig$ = () => (type) => type;
+import("/modules/my-module/dist/main.ts"); // dynamic, so the preamble runs first
 ```
 
-
-| Parameter    | Description                                                                                                            |
-| ------------ | ---------------------------------------------------------------------------------------------------------------------- |
-| `appId`      | Your module's `id` (from `module.json`). Used to build the served paths and to namespace the injected `<script>` tags. |
-| `entrypoint` | Path to your real app entry, relative to the module root (e.g. `dist/main.ts`), as served by the Vite dev server.      |
-
-
-It injects (idempotently — safe to call more than once):
-
-- A `<script type="module">` preamble that wires up the React Refresh global hooks, loading `@react-refresh` from `/modules/<appId>/dist/@react-refresh`.
-- A `<script type="module" src="/modules/<appId>/<entrypoint>">` that loads your app.
+> **Migrating from `devSetup`:** `devSetup` is **deprecated**. Delete your `src/main.js` shim and the hand-written `base`/`server`/`build` config, then add `foundryReact()` — it reproduces the same behavior, deriving the preamble and paths from your resolved Vite config.
 
 ## Exports
 

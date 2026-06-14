@@ -13,6 +13,10 @@
     "./dev-setup": {
       "types": "./dist/util/dev-setup.d.mts",
       "import": "./dist/util/dev-setup.mjs"
+    },
+    "./vite": {
+      "types": "./dist/vite/index.d.mts",
+      "import": "./dist/vite/index.mjs"
     }
   },
   "files": [
@@ -21,6 +25,7 @@
   "scripts": {
     "build": "tsup",
     "build:watch": "tsup --watch",
+    "prepare": "tsup",
     "prepublishOnly": "pnpm build"
   },
   "keywords": [],
@@ -35,13 +40,25 @@
     "url": "https://github.com/tasandberg/foundry-vtt-react/issues"
   },
   "devDependencies": {
+    "@vitejs/plugin-react": "^6.0.2",
     "fvtt-types": "^13",
     "tsup": "^8.5.1",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vite": "^8.0.16"
   },
   "peerDependencies": {
+    "@vitejs/plugin-react": ">=4",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "vite": ">=5"
+  },
+  "peerDependenciesMeta": {
+    "@vitejs/plugin-react": {
+      "optional": true
+    },
+    "vite": {
+      "optional": true
+    }
   },
   "dependencies": {
     "@types/react": "^19.2.5",

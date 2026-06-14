@@ -3,6 +3,7 @@
     "types": ["fvtt-types"],
     "jsx": "react-jsx",
     "target": "esnext",
+    "module": "esnext",
     "moduleResolution": "bundler",
     "strict": true
   }
