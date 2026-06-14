@@ -2,47 +2,33 @@ import { readFileSync } from "node:fs";
 import { basename, resolve } from "node:path";
 import type { Plugin, ProxyOptions, UserConfig } from "vite";
 
-/**
- * Options for the `foundry-vtt-react` Vite plugin. Every option is optional;
- * sensible Foundry-friendly defaults are filled in (and `appId` is read from
- * `module.json`) when omitted.
- */
+/** Options for the `foundry-vtt-react` Vite plugin. All optional; Foundry-friendly defaults fill in. */
 export interface FoundryReactOptions {
-  /** Your module's `id` (from `module.json`). Defaults to the `id` read from `./module.json`. */
+  /** Module `id`. Defaults to the `id` in `./module.json`. */
   appId?: string;
-  /** The real app entry / build input, relative to the project root. Defaults to `"src/main.ts"`. */
+  /** App entry / build input, relative to the project root. Default `"src/main.ts"`. */
   entry?: string;
-  /** The local Foundry server to proxy non-bundle requests to. Defaults to `"http://localhost:30000"`. */
+  /** Foundry server to proxy non-bundle requests to. Default `"http://localhost:30000"`. */
   foundryUrl?: string;
-  /** The Vite dev server port. Defaults to `30001`. */
+  /** Dev server port. Default `30001`. */
   port?: number;
-  /**
-   * The bundle filename Foundry requests (the basename of your manifest's `esmodules` entry).
-   * Defaults to the basename of `module.json`'s first `esmodules` entry, falling back to `"main.js"`.
-   */
+  /** Bundle filename Foundry requests. Defaults to the basename of `esmodules[0]`, else `"main.js"`. */
   manifestEntry?: string;
 }
 
 const PLUGIN_NAME = "vite-plugin-foundry-react";
 
 /**
- * Read the React Fast Refresh preamble template (with the `__BASE__` placeholder) from
- * `@vitejs/plugin-react` — its single source of truth, so we never drift from it.
- *
- * Imported lazily, never at module load: a static import would pull plugin-react in just to read
- * this plugin, coupling us to its internal-API version (e.g. its `vite/internal` usage).
- *
- * No vendored fallback: the preamble is useless without plugin-react's `/@react-refresh` runtime,
- * which plugin-react serves — so it's required for the dev server. If it's missing, the `import()`
- * below throws a clear "Cannot find package" on its own; we don't dress that up. The `??` covers
- * both export shapes (named in older versions, on the default export since v6).
+ * Read the Fast Refresh preamble template from `@vitejs/plugin-react` (its source of truth).
+ * Lazy import, never static: a static one couples us to plugin-react's internal-API version.
+ * plugin-react is required for the dev server, so a missing dep throws naturally here. `??` covers
+ * both export shapes (named pre-v6, default-export property since).
  */
 export async function loadPreambleTemplate(): Promise<string> {
   const mod: any = await import("@vitejs/plugin-react");
   return mod.default?.preambleCode ?? mod.preambleCode;
 }
 
-/** Read the module manifest (`module.json`) from the project root, if present. */
 function readManifest(root: string): { id?: string; esmodules?: string[] } | null {
   try {
     return JSON.parse(readFileSync(resolve(root, "module.json"), "utf-8"));
@@ -52,22 +38,12 @@ function readManifest(root: string): { id?: string; esmodules?: string[] } | nul
 }
 
 /**
- * Vite plugin that wires a React module into a local Foundry VTT instance.
- *
- * It owns the Foundry-specific dev/build configuration (`base`, `root`,
- * `server.proxy`, `build`) — each value is only set when you haven't already
- * specified it, so your own config always wins — and serves a React Fast Refresh
- * preamble at the manifest URL so Foundry boots your app with HMR. No dev shim
- * file is required.
+ * Vite plugin wiring a React module into a local Foundry VTT instance: owns the Foundry-specific
+ * config (`base`, `root`, `server.proxy`, `build`, react dedupe — only where you haven't set it)
+ * and serves a Fast Refresh preamble at the manifest URL so Foundry boots with HMR, no shim file.
  *
  * @example
- * ```ts
- * import { defineConfig } from "vite";
- * import react from "@vitejs/plugin-react";
- * import foundryReact from "foundry-vtt-react/vite";
- *
  * export default defineConfig({ plugins: [react(), foundryReact()] });
- * ```
  */
 export default function foundryReact(options: FoundryReactOptions = {}): Plugin {
   let base = "";
@@ -100,12 +76,11 @@ export default function foundryReact(options: FoundryReactOptions = {}): Plugin 
       entryUrl = `${base}/${basename(entry)}`;
 
       const proxy: Record<string, string | ProxyOptions> = {
-        // Everything that isn't the dev bundle goes to the Foundry server.
-        [`^(?!${base})`]: foundryUrl,
+        [`^(?!${base})`]: foundryUrl, // anything but the dev bundle → Foundry
         "/socket.io": { target: foundryUrl.replace(/^http/, "ws"), ws: true },
       };
 
-      // Only fill values the user hasn't set, so explicit user config always wins.
+      // Only fill what the user hasn't set, so their config always wins.
       const next: UserConfig = {};
       if (userConfig.base == null) next.base = base;
       if (userConfig.root == null) next.root = "src";
@@ -126,10 +101,8 @@ export default function foundryReact(options: FoundryReactOptions = {}): Plugin 
         },
       };
 
-      // foundry-vtt-react mounts your app with react-dom, so react/react-dom must resolve to a
-      // single copy — when this package is linked or installed from git it otherwise pulls a
-      // second copy and every hook throws "Invalid hook call". Add only the entries the user
-      // hasn't already deduped (Vite concatenates this with their list, so don't duplicate).
+      // Force a single react/react-dom — a linked/git-installed copy otherwise duplicates React
+      // ("Invalid hook call"). Append only what the user hasn't (Vite concatenates dedupe lists).
       const dedupe = ["react", "react-dom"].filter((d) => !userConfig.resolve?.dedupe?.includes(d));
       if (dedupe.length) next.resolve = { dedupe };
 
@@ -141,8 +114,7 @@ export default function foundryReact(options: FoundryReactOptions = {}): Plugin 
       const preambleTemplate = await loadPreambleTemplate();
       const body = buildDevModule(base, entryUrl, preambleTemplate);
 
-      // Serve the Fast Refresh preamble + dynamic entry import at the manifest URL,
-      // replacing the dev shim file Foundry would otherwise load.
+      // Serve the preamble + dynamic entry import at the manifest URL (replaces the dev shim file).
       server.middlewares.use((req, res, next) => {
         const url = req.url?.split("?")[0];
         if (url !== manifestUrl) return next();
@@ -151,8 +123,6 @@ export default function foundryReact(options: FoundryReactOptions = {}): Plugin 
         res.end(body);
       });
 
-      // One concise dev-only line: the integration is invisible (no shim file), so confirm it's
-      // active, where the entry is served, and the proxy target (a wrong foundryUrl is otherwise silent).
       server.config.logger.info(
         `  ${PLUGIN_NAME} serving dev entry at ${manifestUrl} (proxying to ${foundryUrl})`,
       );
@@ -161,18 +131,11 @@ export default function foundryReact(options: FoundryReactOptions = {}): Plugin 
 }
 
 /**
- * Build the dev module served at the manifest URL: the base-substituted Fast Refresh
- * preamble followed by a **dynamic** import of the real entry.
- *
- * The entry import must be dynamic: a static `import` would be hoisted above
- * `injectIntoGlobalHook(window)` and break Fast Refresh.
- *
- * @param preambleTemplate The preamble template (with `__BASE__` placeholder), from
- * {@link loadPreambleTemplate}.
+ * Preamble (base-substituted) + a **dynamic** import of the real entry. Dynamic is required: a
+ * static `import` hoists above `injectIntoGlobalHook(window)` and breaks Fast Refresh.
  */
 export function buildDevModule(base: string, entryUrl: string, preambleTemplate: string): string {
-  // `@vitejs/plugin-react`'s preamble expects `__BASE__` to be Vite's normalized base,
-  // which always ends with a slash (e.g. `/modules/x/dist/` + `@react-refresh`).
+  // plugin-react's `__BASE__` expects Vite's normalized base (trailing slash).
   const baseWithSlash = base.endsWith("/") ? base : `${base}/`;
   return `${preambleTemplate.replace("__BASE__", baseWithSlash)}\nimport(${JSON.stringify(entryUrl)});\n`;
 }
