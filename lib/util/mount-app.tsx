@@ -1,3 +1,4 @@
+import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
 
 export function mountApp({
@@ -13,9 +14,13 @@ export function mountApp({
   innerSelector: string;
 }) {
   const root = createRoot(element);
-  root.render(
-    <div id={innerSelector}>
-      <App {...initialProps} />
-    </div>
-  );
+  // flushSync forces React to commit synchronously so the real DOM exists by
+  // the time _onRender resolves and Foundry fires its render-hook chain.
+  flushSync(() => {
+    root.render(
+      <div id={innerSelector}>
+        <App {...initialProps} />
+      </div>
+    );
+  });
 }
