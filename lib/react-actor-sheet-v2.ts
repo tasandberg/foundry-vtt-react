@@ -16,4 +16,7 @@
  */
 import ReactApplicationMixin from "./react-application-mixin";
 
-export class ReactActorSheetV2 extends ReactApplicationMixin(foundry.applications.sheets.ActorSheetV2) {}
+const ReactActorSheetV2_Base: ReactApplicationMixin.Mix<typeof foundry.applications.sheets.ActorSheetV2> =
+  ReactApplicationMixin(foundry.applications.sheets.ActorSheetV2);
+
+export class ReactActorSheetV2 extends ReactActorSheetV2_Base {}

@@ -4,18 +4,18 @@
   "description": "Extensions of various FoundryVTT classes to support React applications.",
   "packageManager": "pnpm@10.30.3",
   "main": "dist/index.mjs",
-  "types": "dist/index.d.mts",
+  "types": "dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.mts",
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs"
     },
     "./dev-setup": {
-      "types": "./dist/util/dev-setup.d.mts",
+      "types": "./dist/util/dev-setup.d.ts",
       "import": "./dist/util/dev-setup.mjs"
     },
     "./vite": {
-      "types": "./dist/vite/index.d.mts",
+      "types": "./dist/vite/index.d.ts",
       "import": "./dist/vite/index.mjs"
     }
   },
@@ -23,9 +23,9 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsup",
+    "build": "tsup && tsc -p tsconfig.build.json",
     "build:watch": "tsup --watch",
-    "prepare": "tsup",
+    "prepare": "tsup && tsc -p tsconfig.build.json",
     "prepublishOnly": "pnpm build"
   },
   "keywords": [],

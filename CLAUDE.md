@@ -60,7 +60,7 @@ The mixin overrides Foundry's render pipeline to inject React instead of Handleb
 - **TypeScript strict mode**; use `fvtt-types` for Foundry globals (e.g. `foundry.applications.api.ApplicationV2`).
 - JSX runtime is `react-jsx` (React 17+ transform).
 - Avoid `any` **except** in mixin signatures, where the superclass type is genuinely dynamic.
-- Build is **tsup** (esbuild), not Vite. Three entry points (`lib/index.ts`, the dev-setup utility, and the `lib/vite` plugin), **ESM only**, with type declarations. The `./vite` subpath is exported separately in `package.json`; `vite` and `@vitejs/plugin-react` are **optional** peer dependencies (only the plugin needs them).
+- Build is **tsup** (esbuild) for JS bundling, not Vite. Three entry points (`lib/index.ts`, the dev-setup utility, and the `lib/vite` plugin), **ESM only**. Type declarations come from a separate `tsc -p tsconfig.build.json` step (per-file `.d.ts`, not bundled) — tsup's rollup-based dts bundler can't parse fvtt-types' declarations and collapses the generic mixin surface to `any`. `pnpm build` runs `tsup && tsc -p tsconfig.build.json`. The `./vite` subpath is exported separately in `package.json`; `vite` and `@vitejs/plugin-react` are **optional** peer dependencies (only the plugin needs them).
 
 ## Common tasks
 
