@@ -1,4 +1,5 @@
 import type { Mixin } from "fvtt-types/utils";
+import { flushSync } from "react-dom";
 import { ContextConnector } from "./context-connector";
 import { mountApp } from "./util/mount-app";
 
@@ -154,7 +155,11 @@ function ReactApplicationMixin<TBase extends ReactApplicationMixin.BaseClass>(
           innerSelector: this.innerSelector,
         });
       }
-      this.contextConnector.publishContext(context);
+      // flushSync so subscriber-driven re-renders commit before _onRender
+      // resolves; Foundry then fires its render hooks against the new DOM.
+      flushSync(() => {
+        this.contextConnector.publishContext(context);
+      });
     }
 
     _replaceHTML(result: HTMLElement, content: HTMLElement) {
