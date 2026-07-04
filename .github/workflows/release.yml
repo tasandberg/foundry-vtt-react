@@ -55,5 +55,31 @@ jobs:
           echo "Publishing version $VERSION"
           npm version "$VERSION" --no-git-tag-version --allow-same-version
 
+      # Pick the npm dist-tag from the Release's prerelease flag. npm does NOT
+      # infer this from semver, so a prerelease version like 0.2.0-beta.1 would
+      # otherwise land on `latest` and hijack plain `npm install
+      # foundry-vtt-react`. Prerelease -> `next`, stable -> `latest`.
+      #
+      # Belt-and-suspenders: fail loudly if the Release's prerelease checkbox
+      # disagrees with the version string (a `-` identifier marks a prerelease
+      # version per semver). A mismatch means the tag or the checkbox is wrong,
+      # and either way the wrong dist-tag would ship — better to stop.
+      - name: Determine npm dist-tag
+        id: disttag
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          PRERELEASE="${{ github.event.release.prerelease }}"
+          case "$VERSION" in
+            *-*) VERSION_IS_PRERELEASE=true ;;
+            *)   VERSION_IS_PRERELEASE=false ;;
+          esac
+          if [ "$PRERELEASE" != "$VERSION_IS_PRERELEASE" ]; then
+            echo "::error::Release prerelease flag ($PRERELEASE) disagrees with version '$VERSION' (semver prerelease: $VERSION_IS_PRERELEASE). Fix the Release's pre-release checkbox or the tag."
+            exit 1
+          fi
+          if [ "$PRERELEASE" = "true" ]; then TAG=next; else TAG=latest; fi
+          echo "Publishing $VERSION to dist-tag '$TAG'"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
       - name: Publish to npm
-        run: npm publish --access public
+        run: npm publish --access public --tag "${{ steps.disttag.outputs.tag }}"
