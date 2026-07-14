@@ -1,5 +1,6 @@
 import type { Mixin } from "fvtt-types/utils";
 import { flushSync } from "react-dom";
+import type { Root } from "react-dom/client";
 import { ContextConnector } from "./context-connector";
 import { mountApp } from "./util/mount-app";
 
@@ -68,6 +69,8 @@ declare class ReactApplication {
   innerSelector: string;
   contextConnector: ContextConnector<any>;
   initialProps: Record<string, any>;
+  /** The mounted React root, or `null` while the application is closed. */
+  reactRoot: Root | null;
 
   static DEFAULT_OPTIONS: {
     position: {
@@ -85,6 +88,11 @@ declare class ReactApplication {
 
   protected _onRender(
     context: foundry.applications.api.ApplicationV2.RenderContextOf<this>,
+    options: foundry.applications.api.ApplicationV2.RenderOptionsOf<this>,
+  ): Promise<void>;
+
+  /** Unmounts the React root so a closed application leaves nothing subscribed. */
+  protected _preClose(
     options: foundry.applications.api.ApplicationV2.RenderOptionsOf<this>,
   ): Promise<void>;
 
@@ -116,6 +124,7 @@ function ReactApplicationMixin<TBase extends ReactApplicationMixin.BaseClass>(
     rootId = `react-app-root-${this.uuid}`;
     innerSelector = `react-application-inner-${this.rootId}`;
     contextConnector: ContextConnector<any>;
+    reactRoot: Root | null = null;
 
     static DEFAULT_OPTIONS = {
       position: {
@@ -148,7 +157,7 @@ function ReactApplicationMixin<TBase extends ReactApplicationMixin.BaseClass>(
       const el = this.element.querySelectorAll(`#${this.rootId}`);
 
       if (el && !this.appIsRendered) {
-        mountApp({
+        this.reactRoot = mountApp({
           App: this.reactApp,
           element: el[0],
           initialProps: context.initialProps,
@@ -160,6 +169,18 @@ function ReactApplicationMixin<TBase extends ReactApplicationMixin.BaseClass>(
       flushSync(() => {
         this.contextConnector.publishContext(context);
       });
+    }
+
+    // Foundry caches one Application instance per document and reuses it across
+    // open/close, so without this every re-open mounts a fresh root while the old
+    // one stays alive — still subscribed to the shared ContextConnector, so every
+    // later publishContext re-renders every root ever mounted (and retains its
+    // detached DOM). Unmount before Foundry tears the element out, so component
+    // cleanups still see a connected tree.
+    async _preClose(options: any) {
+      await super._preClose(options);
+      this.reactRoot?.unmount();
+      this.reactRoot = null;
     }
 
     _replaceHTML(result: HTMLElement, content: HTMLElement) {

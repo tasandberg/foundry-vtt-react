@@ -28,6 +28,7 @@ The mixin overrides Foundry's render pipeline to inject React instead of Handleb
 - `_renderHTML` — returns the root container `<div>` (with `rootId`).
 - `_onRender` — mounts the React app via `mountApp()` (once) and calls `contextConnector.publishContext()`.
 - `_replaceHTML` — suppressed after mount so Foundry's normal DOM replacement doesn't wipe the React tree on re-render.
+- `_preClose` — unmounts the React root (`reactRoot`) so the closed app leaves nothing mounted or subscribed.
 
 ### Supporting modules
 
@@ -54,6 +55,7 @@ The mixin overrides Foundry's render pipeline to inject React instead of Handleb
 - **`_replaceHTML` is intentionally a no-op after mount.** Removing the `appIsRendered` guard lets Foundry replace the DOM and destroy the React tree on every re-render.
 - **Each instance gets a unique `uuid`** (`foundry.utils.randomID`) used to build `rootId` / `innerSelector`, so multiple React apps can run at once without DOM ID collisions.
 - **`appIsRendered`** checks for `innerSelector` in the DOM to prevent double-mounting; React should mount once per instance.
+- **`_preClose` must unmount `reactRoot`.** Foundry caches one Application instance per document and reuses it across open/close. Drop the root and every re-open mounts a new one while the old stays alive — still subscribed to the shared `ContextConnector`, so every later `publishContext()` re-renders *every root ever mounted*, and each retains its detached DOM. Measured before the fix: 100 open/close cycles → 100 live roots, 100 commits per actor update.
 
 ## Conventions
 
