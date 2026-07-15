@@ -23,4 +23,8 @@ export function mountApp({
       </div>
     );
   });
+  // Caller owns the root and must unmount it on close — Foundry reuses a single
+  // Application instance across open/close, so a dropped root stays mounted and
+  // subscribed to the shared ContextConnector.
+  return root;
 }
