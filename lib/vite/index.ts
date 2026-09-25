@@ -17,6 +17,7 @@ export interface FoundryReactOptions {
 }
 
 const PLUGIN_NAME = "vite-plugin-foundry-react";
+const PREAMBLE_FILE = "@foundry-react-preamble.js";
 
 /**
  * Read the Fast Refresh preamble template from `@vitejs/plugin-react` (its source of truth).
@@ -40,7 +41,7 @@ function readManifest(root: string): { id?: string; esmodules?: string[] } | nul
 /**
  * Vite plugin wiring a React module into a local Foundry VTT instance: owns the Foundry-specific
  * config (`base`, `root`, `server.proxy`, `build`, react dedupe — only where you haven't set it)
- * and serves a Fast Refresh preamble at the manifest URL so Foundry boots with HMR, no shim file.
+ * and serves a dev entry at the manifest URL that loads the Fast Refresh preamble, then your entry.
  *
  * @example
  * export default defineConfig({ plugins: [react(), foundryReact()] });
@@ -111,13 +112,16 @@ export default function foundryReact(options: FoundryReactOptions = {}): Plugin 
 
     async configureServer(server) {
       const manifestUrl = `${base}/${manifestEntry}`;
+      const preambleUrl = `${base}/${PREAMBLE_FILE}`;
       const preambleTemplate = await loadPreambleTemplate();
-      const body = buildDevModule(base, entryUrl, preambleTemplate);
+      const routes: Record<string, string> = {
+        [manifestUrl]: buildDevModule(preambleUrl, entryUrl),
+        [preambleUrl]: buildPreambleModule(base, preambleTemplate),
+      };
 
-      // Serve the preamble + dynamic entry import at the manifest URL (replaces the dev shim file).
       server.middlewares.use((req, res, next) => {
-        const url = req.url?.split("?")[0];
-        if (url !== manifestUrl) return next();
+        const body = routes[req.url?.split("?")[0] ?? ""];
+        if (body == null) return next();
 
         res.setHeader("Content-Type", "text/javascript");
         res.end(body);
@@ -130,12 +134,12 @@ export default function foundryReact(options: FoundryReactOptions = {}): Plugin 
   };
 }
 
-/**
- * Preamble (base-substituted) + a **dynamic** import of the real entry. Dynamic is required: a
- * static `import` hoists above `injectIntoGlobalHook(window)` and breaks Fast Refresh.
- */
-export function buildDevModule(base: string, entryUrl: string, preambleTemplate: string): string {
-  // plugin-react's `__BASE__` expects Vite's normalized base (trailing slash).
+export function buildPreambleModule(base: string, preambleTemplate: string): string {
   const baseWithSlash = base.endsWith("/") ? base : `${base}/`;
-  return `${preambleTemplate.replace("__BASE__", baseWithSlash)}\nimport(${JSON.stringify(entryUrl)});\n`;
+  return preambleTemplate.replace("__BASE__", baseWithSlash);
+}
+
+/** Must stay static: ordered evaluation runs the preamble before react-dom, and the entry before Foundry's `init`. */
+export function buildDevModule(preambleUrl: string, entryUrl: string): string {
+  return `import ${JSON.stringify(preambleUrl)};\nimport ${JSON.stringify(entryUrl)};\n`;
 }
