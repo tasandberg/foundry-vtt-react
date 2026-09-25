@@ -69,13 +69,13 @@ A React component rendered inside a Foundry application window
 | Option         | Type                  | Description                                                                              |
 | -------------- | --------------------- | ---------------------------------------------------------------------------------------- |
 | `reactApp`     | `React.ComponentType` | The component mounted into the application window.                                       |
-| `initialProps` | `ComponentProps<C>` (optional) | Props passed to `reactApp` on mount. Also reachable via `_prepareContext` (see below).   |
+| `initialProps` | `ComponentProps<C>` (optional) | Props passed to `reactApp` on mount. Returned by `_prepareProps` (see below).           |
 | ...options     | `ApplicationV2`       | Any standard `ApplicationV2` options (`window`, `position`, `classes`, `actions`, etc.). |
 
 
 ### Building a React actor sheet
 
-Subclass `ReactActorSheetV2`, set `reactApp`, and register it as the sheet for your actor type. Override `_prepareContext` to choose exactly which props your component receives — this is also where you hand your component the `[ContextConnector](#reacting-to-foundry-updates-with-contextconnector)` so it can subscribe to live document updates:
+Subclass `ReactActorSheetV2`, set `reactApp`, and register it as the sheet for your actor type. Override `_prepareProps` to choose exactly which props your component receives — this is also where you hand your component the `[ContextConnector](#reacting-to-foundry-updates-with-contextconnector)` so it can subscribe to live document updates. With a type argument (`ReactActorSheetV2<typeof MySheetApp>`), its return value is type-checked against your component's props in TypeScript:
 
 ```jsx
 import { ReactActorSheetV2 } from "foundry-vtt-react";
@@ -90,15 +90,12 @@ class MyActorSheet extends ReactActorSheetV2 {
     classes: ["my-sheet"],
   };
 
-  async _prepareContext(options) {
-    const context = await super._prepareContext(options);
-    // Pick the props your React app receives:
-    context.initialProps = {
-      actor: context.document,
+  async _prepareProps(context) {
+    return {
+      actor: this.actor,
       source: context.source,
       contextConnector: this.contextConnector, // for live updates
     };
-    return context;
   }
 }
 ```

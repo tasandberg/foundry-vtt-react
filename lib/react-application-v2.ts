@@ -32,6 +32,12 @@ export class ReactApplicationV2<
   declare reactApp: C;
   declare initialProps: P;
 
+  protected override _prepareProps(
+    _context: foundry.applications.api.ApplicationV2.RenderContextOf<this>,
+  ): P | Promise<P> {
+    return this.initialProps;
+  }
+
   constructor(
     options: ReactApplicationProps<C, P> & DeepPartial<foundry.applications.api.ApplicationV2.Configuration>,
   ) {

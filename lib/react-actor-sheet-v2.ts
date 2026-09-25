@@ -25,4 +25,10 @@ export class ReactActorSheetV2<
 > extends ReactActorSheetV2_Base {
   declare reactApp: C;
   declare initialProps: P;
+
+  protected override _prepareProps(
+    _context: foundry.applications.api.ApplicationV2.RenderContextOf<this>,
+  ): P | Promise<P> {
+    return this.initialProps;
+  }
 }

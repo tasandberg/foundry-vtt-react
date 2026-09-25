@@ -104,6 +104,10 @@ declare class ReactApplication {
     options: foundry.applications.api.ApplicationV2.RenderOptionsOf<this>,
   ): Promise<foundry.applications.api.ApplicationV2.RenderContextOf<this>>;
 
+  protected _prepareProps(
+    context: foundry.applications.api.ApplicationV2.RenderContextOf<this>,
+  ): object | Promise<object>;
+
   protected _renderHTML(): Promise<HTMLElement>;
 }
 
@@ -193,8 +197,12 @@ function ReactApplicationMixin<TBase extends ReactApplicationMixin.BaseClass>(
 
     async _prepareContext(options: any) {
       const context = (await super._prepareContext(options)) as any;
-      context.initialProps = this.initialProps;
+      context.initialProps = await this._prepareProps(context);
       return context;
+    }
+
+    _prepareProps(_context: any): object | Promise<object> {
+      return this.initialProps;
     }
 
     async _renderHTML() {

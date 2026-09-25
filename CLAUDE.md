@@ -28,7 +28,8 @@ Each concrete class is generic over the component (`<C extends AnyComponent = An
 
 The mixin overrides Foundry's render pipeline to inject React instead of Handlebars:
 
-- `_prepareContext` — injects `initialProps` into Foundry's context.
+- `_prepareContext` — awaits `_prepareProps(context)` and assigns the result to `context.initialProps`, which `mountApp` reads.
+- `_prepareProps` — the typed props hook. Defaults to `this.initialProps`; sheets override it (Foundry constructs sheets, so `this.initialProps` is never set). Each concrete class re-declares it with a real `protected` override returning `P`, since a `declare` field or merged interface can't narrow a protected method. Subclasses that still set `context.initialProps` in `_prepareContext` after `super` overwrite the hook's value.
 - `_renderHTML` — returns the root container `<div>` (with `rootId`).
 - `_onRender` — mounts the React app via `mountApp()` (once) and calls `contextConnector.publishContext()`.
 - `_replaceHTML` — suppressed after mount so Foundry's normal DOM replacement doesn't wipe the React tree on re-render.
@@ -50,7 +51,7 @@ The mixin overrides Foundry's render pipeline to inject React instead of Handleb
 ### Data flow
 
 1. Consumer instantiates `ReactApplicationV2` with `reactApp` (a React component) and `initialProps`.
-2. On `.render()`, Foundry calls `_prepareContext()` → context now carries `initialProps`.
+2. On `.render()`, Foundry calls `_prepareContext()`, which sets `context.initialProps` from `_prepareProps(context)`.
 3. `_onRender()` mounts the React app and publishes the context.
 4. Subsequent renders call `publishContext()`, notifying subscribed components of context changes.
 
