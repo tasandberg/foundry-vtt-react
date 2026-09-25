@@ -21,10 +21,15 @@ React capabilities are added to Foundry's base classes through a single mixin:
 - `ReactApplicationMixin` ([lib/react-application-mixin.ts](lib/react-application-mixin.ts)) — adds React mounting, context publishing, and lifecycle integration.
 - `ReactApplicationV2` ([lib/react-application-v2.ts](lib/react-application-v2.ts)) = `ReactApplicationMixin(foundry.applications.api.ApplicationV2)`
 - `ReactActorSheetV2` ([lib/react-actor-sheet-v2.ts](lib/react-actor-sheet-v2.ts)) = `ReactApplicationMixin(foundry.applications.sheets.ActorSheetV2)`
+- `ReactItemSheetV2` ([lib/react-item-sheet-v2.ts](lib/react-item-sheet-v2.ts)) = `ReactApplicationMixin(foundry.applications.sheets.ItemSheetV2)`
+- `ReactDocumentSheetV2` ([lib/react-document-sheet-v2.ts](lib/react-document-sheet-v2.ts)) = `ReactApplicationMixin(foundry.applications.api.DocumentSheetV2)`, generic over the document type `D` (DocumentSheetV2's has no default)
+
+Each concrete class is generic over the component (`<C extends AnyComponent = AnyComponent, P = React.ComponentProps<C>>`) and narrows `reactApp`/`initialProps` with `declare` fields. The mixin itself stays non-generic in `C`: its return type is `Mixin<typeof ReactApplication, TBase>`, and making `ReactApplication` generic there would trade away the preserved Foundry generics. Fields must stay `declare` — a plain field re-initializes to `undefined` after `super()` under `useDefineForClassFields`. `ReactApplicationProps.initialProps` is `NoInfer<P>` so `P` falls to `ComponentProps<C>` instead of being inferred from the props passed in.
 
 The mixin overrides Foundry's render pipeline to inject React instead of Handlebars:
 
-- `_prepareContext` — injects `initialProps` into Foundry's context.
+- `_prepareContext` — awaits `_prepareProps(context)` and assigns the result to `context.initialProps`, which `mountApp` reads.
+- `_prepareProps` — the typed props hook. Defaults to `this.initialProps`; sheets override it (Foundry constructs sheets, so `this.initialProps` is never set). Each concrete class re-declares it with a real `protected` override returning `P`, since a `declare` field or merged interface can't narrow a protected method. Subclasses that still set `context.initialProps` in `_prepareContext` after `super` overwrite the hook's value. Its context parameter is typed `ReactContext<this>` (exported alias for `ApplicationV2.RenderContextOf`); TS doesn't pass base parameter types down to overrides, so consumers annotate it themselves.
 - `_renderHTML` — returns the root container `<div>` (with `rootId`).
 - `_onRender` — mounts the React app via `mountApp()` (once) and calls `contextConnector.publishContext()`.
 - `_replaceHTML` — suppressed after mount so Foundry's normal DOM replacement doesn't wipe the React tree on re-render.
@@ -46,7 +51,7 @@ The mixin overrides Foundry's render pipeline to inject React instead of Handleb
 ### Data flow
 
 1. Consumer instantiates `ReactApplicationV2` with `reactApp` (a React component) and `initialProps`.
-2. On `.render()`, Foundry calls `_prepareContext()` → context now carries `initialProps`.
+2. On `.render()`, Foundry calls `_prepareContext()`, which sets `context.initialProps` from `_prepareProps(context)`.
 3. `_onRender()` mounts the React app and publishes the context.
 4. Subsequent renders call `publishContext()`, notifying subscribed components of context changes.
 
@@ -67,7 +72,7 @@ The mixin overrides Foundry's render pipeline to inject React instead of Handleb
 ## Common tasks
 
 **Add a new React-enabled Foundry class:**
-1. `export class ReactFooV2 extends ReactApplicationMixin(foundry.applications.foo.FooV2) {}`
+1. Follow [lib/react-item-sheet-v2.ts](lib/react-item-sheet-v2.ts): a `_Base` const typed `ReactApplicationMixin.Mix<typeof FooV2>`, then a class generic over `C`/`P` with `declare reactApp: C; declare initialProps: P;`. Forward the base's required type params (see `ReactDocumentSheetV2`).
 2. Add it to [lib/index.ts](lib/index.ts) exports.
 
 **Change mixin behavior:** edit [lib/react-application-mixin.ts](lib/react-application-mixin.ts) — the overrides listed under [Architecture](#mixin-based-extension) are the touch points.

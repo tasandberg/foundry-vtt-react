@@ -38,9 +38,14 @@ import { mountApp } from "./util/mount-app";
  * ```
  */
 
-export type ReactApplicationProps = {
-  reactApp: React.ComponentType<any>;
-  initialProps?: Record<string, any>;
+export type AnyComponent = React.ComponentType<any>;
+
+export type ReactContext<App extends foundry.applications.api.ApplicationV2.Internal.Instance.Any> =
+  foundry.applications.api.ApplicationV2.RenderContextOf<App>;
+
+export type ReactApplicationProps<C extends AnyComponent = AnyComponent, P extends object = React.ComponentProps<C>> = {
+  reactApp: C;
+  initialProps?: NoInfer<P>;
 };
 
 /**
@@ -63,12 +68,12 @@ declare class ReactApplication {
   // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   readonly [foundry.applications.api.ApplicationV2.Internal.__RenderOptions]: {};
 
-  reactApp: React.ComponentType<any>;
+  reactApp: AnyComponent;
   uuid: string;
   rootId: string;
   innerSelector: string;
   contextConnector: ContextConnector<any>;
-  initialProps: Record<string, any>;
+  initialProps: object;
   /** The mounted React root, or `null` while the application is closed. */
   reactRoot: Root | null;
 
@@ -101,6 +106,8 @@ declare class ReactApplication {
   protected _prepareContext(
     options: foundry.applications.api.ApplicationV2.RenderOptionsOf<this>,
   ): Promise<foundry.applications.api.ApplicationV2.RenderContextOf<this>>;
+
+  protected _prepareProps(context: ReactContext<this>): object | Promise<object>;
 
   protected _renderHTML(): Promise<HTMLElement>;
 }
@@ -191,8 +198,12 @@ function ReactApplicationMixin<TBase extends ReactApplicationMixin.BaseClass>(
 
     async _prepareContext(options: any) {
       const context = (await super._prepareContext(options)) as any;
-      context.initialProps = this.initialProps;
+      context.initialProps = await this._prepareProps(context);
       return context;
+    }
+
+    _prepareProps(_context: any): object | Promise<object> {
+      return this.initialProps;
     }
 
     async _renderHTML() {

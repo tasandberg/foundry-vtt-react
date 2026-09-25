@@ -25,8 +25,12 @@ npm install react react-dom
 
 - `ReactApplicationV2` — a base `ApplicationV2` that renders a React component instead of a Handlebars template.
 - `ReactActorSheetV2` — an `ActorSheetV2` that renders with React, letting your component react to document changes through the native sheet lifecycle.
+- `ReactItemSheetV2` — the same for `ItemSheetV2`.
+- `ReactDocumentSheetV2` — the same for `DocumentSheetV2`, for any other document type (`ReactDocumentSheetV2<JournalEntry.Implementation>`).
 
-Both are produced by the same `ReactApplicationMixin`, so they share the options and lifecycle described below.
+All are produced by the same `ReactApplicationMixin`, so they share the options and lifecycle described below.
+
+Each class is generic over its component, so `initialProps` is checked against the component's props: `new ReactApplicationV2({ reactApp: MyComponent, initialProps })` infers it, and sheets take it as a type argument (`class MySheet extends ReactActorSheetV2<typeof MySheetApp>`). Omit it and props are untyped, as before.
 
 ## Usage
 
@@ -65,13 +69,13 @@ A React component rendered inside a Foundry application window
 | Option         | Type                  | Description                                                                              |
 | -------------- | --------------------- | ---------------------------------------------------------------------------------------- |
 | `reactApp`     | `React.ComponentType` | The component mounted into the application window.                                       |
-| `initialProps` | `object` (optional)   | Props passed to `reactApp` on mount. Also reachable via `_prepareContext` (see below).   |
+| `initialProps` | `ComponentProps<C>` (optional) | Props passed to `reactApp` on mount. Returned by `_prepareProps` (see below).           |
 | ...options     | `ApplicationV2`       | Any standard `ApplicationV2` options (`window`, `position`, `classes`, `actions`, etc.). |
 
 
 ### Building a React actor sheet
 
-Subclass `ReactActorSheetV2`, set `reactApp`, and register it as the sheet for your actor type. Override `_prepareContext` to choose exactly which props your component receives — this is also where you hand your component the `[ContextConnector](#reacting-to-foundry-updates-with-contextconnector)` so it can subscribe to live document updates:
+Subclass `ReactActorSheetV2`, set `reactApp`, and register it as the sheet for your actor type. Override `_prepareProps` to choose exactly which props your component receives — this is also where you hand your component the `[ContextConnector](#reacting-to-foundry-updates-with-contextconnector)` so it can subscribe to live document updates. With a type argument (`ReactActorSheetV2<typeof MySheetApp>`), its return value is type-checked against your component's props in TypeScript:
 
 ```jsx
 import { ReactActorSheetV2 } from "foundry-vtt-react";
@@ -86,16 +90,21 @@ class MyActorSheet extends ReactActorSheetV2 {
     classes: ["my-sheet"],
   };
 
-  async _prepareContext(options) {
-    const context = await super._prepareContext(options);
-    // Pick the props your React app receives:
-    context.initialProps = {
-      actor: context.document,
+  async _prepareProps(context) {
+    return {
+      actor: this.actor,
       source: context.source,
       contextConnector: this.contextConnector, // for live updates
     };
-    return context;
   }
+}
+```
+
+In TypeScript, annotate the context with `ReactContext<this>` so `context.document` stays typed. The annotation is only needed if you use `context`:
+
+```ts
+protected override _prepareProps(context: ReactContext<this>) {
+  return { actor: context.document, source: context.source, contextConnector: this.contextConnector };
 }
 ```
 
@@ -261,6 +270,8 @@ Static imports evaluate in order, so the preamble runs before React, and your en
 import {
   ReactApplicationV2,
   ReactActorSheetV2,
+  ReactItemSheetV2,
+  ReactDocumentSheetV2,
   ContextConnector,
   devSetup,
 } from "foundry-vtt-react";

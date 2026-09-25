@@ -1,5 +1,5 @@
 import type { DeepPartial } from "fvtt-types/utils";
-import ReactApplicationMixin, { type ReactApplicationProps } from "./react-application-mixin";
+import ReactApplicationMixin, { type AnyComponent, type ReactApplicationProps, type ReactContext } from "./react-application-mixin";
 
 /**
  * A Foundry VTT Application class that integrates React components with the Foundry application framework.
@@ -25,9 +25,19 @@ import ReactApplicationMixin, { type ReactApplicationProps } from "./react-appli
 const ReactApplicationV2_Base: ReactApplicationMixin.Mix<typeof foundry.applications.api.ApplicationV2> =
   ReactApplicationMixin(foundry.applications.api.ApplicationV2);
 
-export class ReactApplicationV2 extends ReactApplicationV2_Base {
+export class ReactApplicationV2<
+  C extends AnyComponent = AnyComponent,
+  P extends object = React.ComponentProps<C>,
+> extends ReactApplicationV2_Base {
+  declare reactApp: C;
+  declare initialProps: P;
+
+  protected override _prepareProps(_context: ReactContext<this>): P | Promise<P> {
+    return this.initialProps;
+  }
+
   constructor(
-    options: ReactApplicationProps & DeepPartial<foundry.applications.api.ApplicationV2.Configuration>,
+    options: ReactApplicationProps<C, P> & DeepPartial<foundry.applications.api.ApplicationV2.Configuration>,
   ) {
     super(options);
   }
