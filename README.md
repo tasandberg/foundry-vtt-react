@@ -157,7 +157,7 @@ const off = contextConnector.onUpdate(handleUpdate);
 
 ## Development setup with Vite
 
-For a fast dev loop with React Fast Refresh inside Foundry, add the `foundry-vtt-react/vite` plugin. Your manifest's `esmodules` points at `dist/main.js`: in production that's your built bundle, and in dev the plugin's middleware serves that same URL with the Fast Refresh preamble + a dynamic import of your real entry — so there's no shim file and no hand-written Vite config to maintain.
+For a fast dev loop with React Fast Refresh inside Foundry, add the `foundry-vtt-react/vite` plugin. Your manifest's `esmodules` points at `dist/main.js`: in production that's your built bundle, and in dev the plugin's middleware serves that same URL as a module that imports the Fast Refresh preamble, then your real entry — so there's no shim file and no hand-written Vite config to maintain.
 
 ```text
 my-module/
@@ -238,13 +238,20 @@ For a module whose `id` is `my-module`, `foundryReact()` contributes the Vite co
 In dev it also serves the manifest URL (`/modules/my-module/dist/main.js`) with the module that replaces the old `src/main.js` shim:
 
 ```js
-// Fast Refresh preamble (reused from @vitejs/plugin-react; base derived from your config)
+import "/modules/my-module/dist/@foundry-react-preamble.js";
+import "/modules/my-module/dist/main.ts";
+```
+
+The preamble (reused from `@vitejs/plugin-react`) is served at its own URL:
+
+```js
 import { injectIntoGlobalHook } from "/modules/my-module/dist/@react-refresh";
 injectIntoGlobalHook(window);
 window.$RefreshReg$ = () => {};
 window.$RefreshSig$ = () => (type) => type;
-import("/modules/my-module/dist/main.ts"); // dynamic, so the preamble runs first
 ```
+
+Static imports evaluate in order, so the preamble runs before React, and your entry finishes before Foundry fires `init`.
 
 > **Migrating from `devSetup`:** `devSetup` is **deprecated**. Delete your `src/main.js` shim and the hand-written `base`/`server`/`build` config, then add `foundryReact()` — it reproduces the same behavior, deriving the preamble and paths from your resolved Vite config.
 
