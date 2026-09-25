@@ -100,6 +100,14 @@ class MyActorSheet extends ReactActorSheetV2 {
 }
 ```
 
+In TypeScript, annotate the context with `ReactContext<this>` so `context.document` stays typed. The annotation is only needed if you use `context`:
+
+```ts
+protected override _prepareProps(context: ReactContext<this>) {
+  return { actor: context.document, source: context.source, contextConnector: this.contextConnector };
+}
+```
+
 Register it like any other sheet, e.g.:
 
 ```js

@@ -1,5 +1,5 @@
 import type { DeepPartial } from "fvtt-types/utils";
-import ReactApplicationMixin, { type AnyComponent, type ReactApplicationProps } from "./react-application-mixin";
+import ReactApplicationMixin, { type AnyComponent, type ReactApplicationProps, type ReactContext } from "./react-application-mixin";
 
 /**
  * A Foundry VTT Application class that integrates React components with the Foundry application framework.
@@ -32,9 +32,7 @@ export class ReactApplicationV2<
   declare reactApp: C;
   declare initialProps: P;
 
-  protected override _prepareProps(
-    _context: foundry.applications.api.ApplicationV2.RenderContextOf<this>,
-  ): P | Promise<P> {
+  protected override _prepareProps(_context: ReactContext<this>): P | Promise<P> {
     return this.initialProps;
   }
 

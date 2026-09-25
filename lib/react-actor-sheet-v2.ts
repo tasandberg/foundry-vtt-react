@@ -14,7 +14,7 @@
  * }
  * ```
  */
-import ReactApplicationMixin, { type AnyComponent } from "./react-application-mixin";
+import ReactApplicationMixin, { type AnyComponent, type ReactContext } from "./react-application-mixin";
 
 const ReactActorSheetV2_Base: ReactApplicationMixin.Mix<typeof foundry.applications.sheets.ActorSheetV2> =
   ReactApplicationMixin(foundry.applications.sheets.ActorSheetV2);
@@ -26,9 +26,7 @@ export class ReactActorSheetV2<
   declare reactApp: C;
   declare initialProps: P;
 
-  protected override _prepareProps(
-    _context: foundry.applications.api.ApplicationV2.RenderContextOf<this>,
-  ): P | Promise<P> {
+  protected override _prepareProps(_context: ReactContext<this>): P | Promise<P> {
     return this.initialProps;
   }
 }

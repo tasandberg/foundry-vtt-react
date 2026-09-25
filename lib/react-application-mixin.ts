@@ -40,6 +40,9 @@ import { mountApp } from "./util/mount-app";
 
 export type AnyComponent = React.ComponentType<any>;
 
+export type ReactContext<App extends foundry.applications.api.ApplicationV2.Internal.Instance.Any> =
+  foundry.applications.api.ApplicationV2.RenderContextOf<App>;
+
 export type ReactApplicationProps<C extends AnyComponent = AnyComponent, P extends object = React.ComponentProps<C>> = {
   reactApp: C;
   initialProps?: NoInfer<P>;
@@ -104,9 +107,7 @@ declare class ReactApplication {
     options: foundry.applications.api.ApplicationV2.RenderOptionsOf<this>,
   ): Promise<foundry.applications.api.ApplicationV2.RenderContextOf<this>>;
 
-  protected _prepareProps(
-    context: foundry.applications.api.ApplicationV2.RenderContextOf<this>,
-  ): object | Promise<object>;
+  protected _prepareProps(context: ReactContext<this>): object | Promise<object>;
 
   protected _renderHTML(): Promise<HTMLElement>;
 }

@@ -29,7 +29,7 @@ Each concrete class is generic over the component (`<C extends AnyComponent = An
 The mixin overrides Foundry's render pipeline to inject React instead of Handlebars:
 
 - `_prepareContext` — awaits `_prepareProps(context)` and assigns the result to `context.initialProps`, which `mountApp` reads.
-- `_prepareProps` — the typed props hook. Defaults to `this.initialProps`; sheets override it (Foundry constructs sheets, so `this.initialProps` is never set). Each concrete class re-declares it with a real `protected` override returning `P`, since a `declare` field or merged interface can't narrow a protected method. Subclasses that still set `context.initialProps` in `_prepareContext` after `super` overwrite the hook's value.
+- `_prepareProps` — the typed props hook. Defaults to `this.initialProps`; sheets override it (Foundry constructs sheets, so `this.initialProps` is never set). Each concrete class re-declares it with a real `protected` override returning `P`, since a `declare` field or merged interface can't narrow a protected method. Subclasses that still set `context.initialProps` in `_prepareContext` after `super` overwrite the hook's value. Its context parameter is typed `ReactContext<this>` (exported alias for `ApplicationV2.RenderContextOf`); TS doesn't pass base parameter types down to overrides, so consumers annotate it themselves.
 - `_renderHTML` — returns the root container `<div>` (with `rootId`).
 - `_onRender` — mounts the React app via `mountApp()` (once) and calls `contextConnector.publishContext()`.
 - `_replaceHTML` — suppressed after mount so Foundry's normal DOM replacement doesn't wipe the React tree on re-render.

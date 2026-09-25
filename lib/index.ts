@@ -4,4 +4,4 @@ export { ReactItemSheetV2 } from "./react-item-sheet-v2";
 export { ReactDocumentSheetV2 } from "./react-document-sheet-v2";
 export { ContextConnector } from "./context-connector";
 export { devSetup } from "./util/dev-setup";
-export type { AnyComponent, ReactApplicationProps } from "./react-application-mixin";
+export type { AnyComponent, ReactApplicationProps, ReactContext } from "./react-application-mixin";
