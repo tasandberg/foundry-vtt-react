@@ -38,9 +38,11 @@ import { mountApp } from "./util/mount-app";
  * ```
  */
 
-export type ReactApplicationProps = {
-  reactApp: React.ComponentType<any>;
-  initialProps?: Record<string, any>;
+export type AnyComponent = React.ComponentType<any>;
+
+export type ReactApplicationProps<C extends AnyComponent = AnyComponent, P extends object = React.ComponentProps<C>> = {
+  reactApp: C;
+  initialProps?: NoInfer<P>;
 };
 
 /**
@@ -63,12 +65,12 @@ declare class ReactApplication {
   // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   readonly [foundry.applications.api.ApplicationV2.Internal.__RenderOptions]: {};
 
-  reactApp: React.ComponentType<any>;
+  reactApp: AnyComponent;
   uuid: string;
   rootId: string;
   innerSelector: string;
   contextConnector: ContextConnector<any>;
-  initialProps: Record<string, any>;
+  initialProps: object;
   /** The mounted React root, or `null` while the application is closed. */
   reactRoot: Root | null;
 

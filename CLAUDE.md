@@ -21,6 +21,10 @@ React capabilities are added to Foundry's base classes through a single mixin:
 - `ReactApplicationMixin` ([lib/react-application-mixin.ts](lib/react-application-mixin.ts)) — adds React mounting, context publishing, and lifecycle integration.
 - `ReactApplicationV2` ([lib/react-application-v2.ts](lib/react-application-v2.ts)) = `ReactApplicationMixin(foundry.applications.api.ApplicationV2)`
 - `ReactActorSheetV2` ([lib/react-actor-sheet-v2.ts](lib/react-actor-sheet-v2.ts)) = `ReactApplicationMixin(foundry.applications.sheets.ActorSheetV2)`
+- `ReactItemSheetV2` ([lib/react-item-sheet-v2.ts](lib/react-item-sheet-v2.ts)) = `ReactApplicationMixin(foundry.applications.sheets.ItemSheetV2)`
+- `ReactDocumentSheetV2` ([lib/react-document-sheet-v2.ts](lib/react-document-sheet-v2.ts)) = `ReactApplicationMixin(foundry.applications.api.DocumentSheetV2)`, generic over the document type `D` (DocumentSheetV2's has no default)
+
+Each concrete class is generic over the component (`<C extends AnyComponent = AnyComponent, P = React.ComponentProps<C>>`) and narrows `reactApp`/`initialProps` with `declare` fields. The mixin itself stays non-generic in `C`: its return type is `Mixin<typeof ReactApplication, TBase>`, and making `ReactApplication` generic there would trade away the preserved Foundry generics. Fields must stay `declare` — a plain field re-initializes to `undefined` after `super()` under `useDefineForClassFields`. `ReactApplicationProps.initialProps` is `NoInfer<P>` so `P` falls to `ComponentProps<C>` instead of being inferred from the props passed in.
 
 The mixin overrides Foundry's render pipeline to inject React instead of Handlebars:
 
@@ -67,7 +71,7 @@ The mixin overrides Foundry's render pipeline to inject React instead of Handleb
 ## Common tasks
 
 **Add a new React-enabled Foundry class:**
-1. `export class ReactFooV2 extends ReactApplicationMixin(foundry.applications.foo.FooV2) {}`
+1. Follow [lib/react-item-sheet-v2.ts](lib/react-item-sheet-v2.ts): a `_Base` const typed `ReactApplicationMixin.Mix<typeof FooV2>`, then a class generic over `C`/`P` with `declare reactApp: C; declare initialProps: P;`. Forward the base's required type params (see `ReactDocumentSheetV2`).
 2. Add it to [lib/index.ts](lib/index.ts) exports.
 
 **Change mixin behavior:** edit [lib/react-application-mixin.ts](lib/react-application-mixin.ts) — the overrides listed under [Architecture](#mixin-based-extension) are the touch points.
